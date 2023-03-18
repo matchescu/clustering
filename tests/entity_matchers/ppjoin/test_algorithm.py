@@ -1,5 +1,5 @@
 from entity_matchers.ppjoin import find_duplicates
-from entity_matchers.ppjoin._algo import find_duplicates_across, merge_duplicates
+from entity_matchers.ppjoin._algo import find_duplicates_across, merge_duplicates, merge_duplicates_across
 
 
 def test_deduplicate_sample_data_with_half_jaccard(sample_data):
@@ -36,4 +36,13 @@ def test_merge_duplicates():
     assert result == ("a", "e", "c", "d", "f")
 
 
-def
+def test_merge_duplicates_across(two_data_sets):
+    result = list(merge_duplicates_across(two_data_sets, 0.25))
+
+    assert result == [(
+        '304587',
+        'A user-centered interface for querying distributed multimedia databases',
+        'Isabel F. Cruz, Kimberly M. James',
+        'International Conference on Management of Data',
+        '1999'
+    )]

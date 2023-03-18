@@ -161,4 +161,7 @@ def merge_duplicates(dupes: list[tuple]) -> tuple:
 
 def merge_duplicates_across(datasets: list[list[tuple]], t: float) -> list[tuple]:
     duplicates = find_duplicates_across(datasets, t)
-    for 
+    result = []
+    for x, y, _ in duplicates:
+        result.append(merge_duplicates([x[1:], y[1:]]))
+    return result
