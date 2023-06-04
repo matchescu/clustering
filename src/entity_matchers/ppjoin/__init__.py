@@ -1,4 +1,13 @@
-from entity_matchers.ppjoin._algo import find_duplicates
+from entity_matchers.ppjoin._algo import (
+    find_duplicates,
+    find_duplicates_across,
+    merge_duplicates,
+    merge_duplicates_across,
+)
 
-
-__all__ = ["find_duplicates"]
+__all__ = [
+    "find_duplicates",
+    "find_duplicates_across",
+    "merge_duplicates",
+    "merge_duplicates_across"
+]

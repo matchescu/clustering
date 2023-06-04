@@ -3,6 +3,7 @@ import pytest
 
 from pathlib import Path
 
+from abstractions.data_structures import Table
 
 TEST_DIR = Path(__file__).parent
 
@@ -23,4 +24,4 @@ def sample_data() -> list[tuple]:
 
 @pytest.fixture
 def two_data_sets() -> list[list[tuple], list[tuple]]:
-    return [_load_data("subset_a.csv"), _load_data("subset_b.csv")]
+    return [_load_data("subtable_a.csv"), _load_data("subtable_b.csv")]
