@@ -1,4 +1,5 @@
-from collections import Counter
+from collections import Counter, namedtuple
+from dataclasses import dataclass
 from math import ceil
 from typing import Any, Callable, Iterable, Generator
 
@@ -30,34 +31,42 @@ def _compute_inverted_index(data: Iterable[tuple], t: float) -> dict[Any, list[i
     return ii
 
 
-def _tuple_without_idx(row, idx):
-    if idx is None:
-        return row
-    return *row[:idx], *row[idx + 1:]
+def _tuple_without_indexes(row: tuple, excluded: set[int]):
+    return tuple(item for idx, item in enumerate(row) if idx not in excluded)
 
 
 def _prepare_data(
-    data: list[tuple], sort_key: Callable[[Any], Any], dataset_id_column: int = None
+    data: list[tuple], sort_key: Callable[[Any], Any], excluded_indexes: set[int]
 ) -> tuple[dict[int, int], list[tuple]]:
+
+    @dataclass
+    class SortedRow:
+        original_position: int
+        data: tuple
+
+        def __len__(self):
+            return len(self.data)
+
     sorted_rows = list(
-        (index, tuple(sorted(set(_tuple_without_idx(row, dataset_id_column)), key=sort_key)))
+        SortedRow(
+            original_position=index,
+            data=tuple(sorted(_tuple_without_indexes(row, excluded_indexes), key=sort_key)),
+        )
         for index, row in enumerate(data)
     )
-
-    def _by_len(x):
-        return len(x[1])
-
     row_index_mapping = {}
     multiset = []
-    for sorted_index, item in enumerate(sorted(sorted_rows, key=_by_len)):
-        original_index = item[0]
-        sorted_row = item[1]
-        multiset.append(sorted_row)
-        row_index_mapping[sorted_index] = original_index
+    for sorted_index, item in enumerate(sorted(sorted_rows, key=len)):
+        multiset.append(item.data)
+        row_index_mapping[sorted_index] = item.original_position
     return row_index_mapping, multiset
 
 
-def _generate_candidates(data: list[tuple], inverted_index: dict[Any, list[int]], t: float) -> Generator[tuple[int, int], None, None]:
+def _generate_candidates(
+    data: list[tuple],
+    inverted_index: dict[Any, list[int]],
+    t: float
+) -> Generator[tuple[int, int], None, None]:
     for i, x in enumerate(data):
         x_prefix_len = prefix_len(x, t)
         for j in range(x_prefix_len):
@@ -117,7 +126,7 @@ def find_duplicates(
     data: list[tuple],
     t: float,
     sort_key: Callable = None,
-    dataset_id_column: int = None
+    excluded_col_indexes: list[int] = None
 ) -> set[tuple[tuple, tuple, float]]:
     """Compute the similarity between the rows of a multiset."""
     if t < 0 or 1 <= t:
@@ -126,7 +135,8 @@ def find_duplicates(
         )
 
     sort_key = sort_key or _default_sort_key
-    row_index_mapping, multiset = _prepare_data(data, sort_key, dataset_id_column)
+    excluded_col_indexes = excluded_col_indexes or []
+    row_index_mapping, multiset = _prepare_data(data, sort_key, excluded_col_indexes)
     successful_candidates = set()
     inverted_index: dict[Any, list[tuple[int, int]]] = {}
     for x_idx, x in enumerate(multiset):
@@ -174,7 +184,7 @@ def _merge_datasets(datasets: Iterable[list[tuple]], id_col_index: int = 0) -> l
 def find_duplicates_across(datasets: list[list[tuple]], t: float) -> set[tuple[tuple, tuple, float]]:
     dataset_id_index = 0
     merged = _merge_datasets(datasets, dataset_id_index)
-    raw_results = find_duplicates(merged, t, dataset_id_column=dataset_id_index)
+    raw_results = find_duplicates(merged, t, excluded_col_indexes=dataset_id_index)
     results = set()
     for dupe in raw_results:
         x, y, sim = dupe
