@@ -1,5 +1,4 @@
 from collections import Counter, namedtuple
-from dataclasses import dataclass
 from math import ceil
 from typing import Any, Callable, Iterable, Generator
 
@@ -38,27 +37,21 @@ def _tuple_without_indexes(row: tuple, excluded: set[int]):
 def _prepare_data(
     data: list[tuple], sort_key: Callable[[Any], Any], excluded_indexes: set[int]
 ) -> tuple[dict[int, int], list[tuple]]:
-
-    @dataclass
-    class SortedRow:
-        original_position: int
-        data: tuple
-
-        def __len__(self):
-            return len(self.data)
-
+    row_sorting_param = namedtuple("row_sorting_param", ["original_position", "data"])
     sorted_rows = list(
-        SortedRow(
+        row_sorting_param(
             original_position=index,
             data=tuple(sorted(_tuple_without_indexes(row, excluded_indexes), key=sort_key)),
         )
         for index, row in enumerate(data)
     )
+
     row_index_mapping = {}
     multiset = []
-    for sorted_index, item in enumerate(sorted(sorted_rows, key=len)):
+    for sorted_index, item in enumerate(sorted(sorted_rows, key=lambda row: len(row.data))):
         multiset.append(item.data)
         row_index_mapping[sorted_index] = item.original_position
+
     return row_index_mapping, multiset
 
 
@@ -126,7 +119,7 @@ def find_duplicates(
     data: list[tuple],
     t: float,
     sort_key: Callable = None,
-    excluded_col_indexes: list[int] = None
+    exclude_cols: Iterable[int] = None
 ) -> set[tuple[tuple, tuple, float]]:
     """Compute the similarity between the rows of a multiset."""
     if t < 0 or 1 <= t:
@@ -135,8 +128,10 @@ def find_duplicates(
         )
 
     sort_key = sort_key or _default_sort_key
-    excluded_col_indexes = excluded_col_indexes or []
-    row_index_mapping, multiset = _prepare_data(data, sort_key, excluded_col_indexes)
+    row_index_mapping, multiset = _prepare_data(
+        data, sort_key, set(exclude_cols or [])
+    )
+
     successful_candidates = set()
     inverted_index: dict[Any, list[tuple[int, int]]] = {}
     for x_idx, x in enumerate(multiset):
@@ -162,6 +157,7 @@ def find_duplicates(
             successful_candidates.add((sx_idx, sy_idx))
 
     result = set()
+
     for x_idx, y_idx in successful_candidates:
         result_x = data[row_index_mapping[x_idx]]
         result_y = data[row_index_mapping[y_idx]]
@@ -169,6 +165,7 @@ def find_duplicates(
         sy = set(result_y)
         similarity = len(sx & sy) / len(sx | sy)
         result.add((result_x, result_y, similarity))
+
     return result
 
 
@@ -184,7 +181,7 @@ def _merge_datasets(datasets: Iterable[list[tuple]], id_col_index: int = 0) -> l
 def find_duplicates_across(datasets: list[list[tuple]], t: float) -> set[tuple[tuple, tuple, float]]:
     dataset_id_index = 0
     merged = _merge_datasets(datasets, dataset_id_index)
-    raw_results = find_duplicates(merged, t, excluded_col_indexes=dataset_id_index)
+    raw_results = find_duplicates(merged, t, exclude_cols=[dataset_id_index])
     results = set()
     for dupe in raw_results:
         x, y, sim = dupe
