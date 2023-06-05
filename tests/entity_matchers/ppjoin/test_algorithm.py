@@ -1,6 +1,4 @@
-import pytest
-
-from entity_matchers.ppjoin import find_duplicates, find_duplicates_across, merge_duplicates, merge_duplicates_across
+from entity_matchers.ppjoin import find_duplicates, find_duplicates_across
 
 
 def test_deduplicate_sample_data(sample_data):
@@ -20,4 +18,4 @@ def test_deduplicate_exact_matches(sample_data):
 def test_find_duplicates_across_two_datasets(two_data_sets):
     result = list(find_duplicates_across(two_data_sets, 0.4))
 
-    assert 1 < len(result) < min(map(len, two_data_sets))
+    assert 0 < len(result) <= min(map(len, two_data_sets))

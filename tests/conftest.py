@@ -24,4 +24,4 @@ def sample_data() -> list[tuple]:
 
 @pytest.fixture
 def two_data_sets() -> list[list[tuple], list[tuple]]:
-    return [_load_data("subtable_a.csv"), _load_data("subtable_b.csv")]
+    return [_load_data("subsample_a.csv"), _load_data("subsample_b.csv")]

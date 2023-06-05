@@ -162,50 +162,25 @@ def find_duplicates(
     return result
 
 
-def _merge_datasets(datasets: list[list[tuple]]) -> list[tuple]:
+def _merge_datasets(datasets: Iterable[list[tuple]], id_col_index: int = 0) -> list[tuple]:
     result = []
     for dataset_id, dataset in enumerate(datasets):
         for record in dataset:
-            result.append((dataset_id, *record))
+            record_with_dataset_id = record[:id_col_index] + (dataset_id,) + record[id_col_index:]
+            result.append(record_with_dataset_id)
     return result
 
 
 def find_duplicates_across(datasets: list[list[tuple]], t: float) -> set[tuple[tuple, tuple, float]]:
-    merged = _merge_datasets(datasets)
-    raw_results = find_duplicates(merged, t, dataset_id_column=0)
+    dataset_id_index = 0
+    merged = _merge_datasets(datasets, dataset_id_index)
+    raw_results = find_duplicates(merged, t, dataset_id_column=dataset_id_index)
     results = set()
     for dupe in raw_results:
         x, y, sim = dupe
-        x_dataset_id = x[0]
-        y_dataset_id = y[0]
+        x_dataset_id = x[dataset_id_index]
+        y_dataset_id = y[dataset_id_index]
         if x_dataset_id == y_dataset_id:
             continue
         results.add(dupe)
     return results
-
-
-def merge_duplicates(dupes: list[tuple]) -> tuple:
-    existing = dict()
-    result = []
-    union = [token for dupe in dupes for token in dupe]
-    pos = 0
-    for token in union:
-        result.append(token)
-        if token in existing:
-            prev_pos = existing[token]
-            del result[prev_pos]
-            for idx in range(prev_pos, len(result)):
-                existing[result[idx]] = idx
-            pos = len(result) - 1
-        else:
-            existing[token] = pos
-        pos += 1
-    return tuple(result)
-
-
-def merge_duplicates_across(datasets: list[list[tuple]], t: float) -> list[tuple]:
-    duplicates = find_duplicates_across(datasets, t)
-    result = []
-    for x, y, _ in duplicates:
-        result.append(merge_duplicates([x[1:], y[1:]]))
-    return result
