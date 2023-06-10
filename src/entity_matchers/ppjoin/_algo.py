@@ -1,13 +1,15 @@
 from collections import Counter, namedtuple
 from math import ceil
-from typing import Any, Callable, Iterable, Generator
+from typing import Any, Callable, Iterable, Generator, Sized
+
+from abstractions.protocols import SizedIterable
 
 
-def prefix_len(x: tuple, t: float) -> int:
+def prefix_len(x: Sized, t: float) -> int:
     return int(len(x) - ceil(t * len(x)) + 1)
 
 
-def compute_alpha(x: tuple, y: tuple, t: float) -> float:
+def compute_alpha(x: Sized, y: Sized, t: float) -> float:
     coefficient = t / (1 + t)
     union_norm = len(x) + len(y)
     return ceil(coefficient * union_norm)
@@ -17,7 +19,7 @@ def _default_sort_key(token: Any) -> Any:
     return str(token)
 
 
-def _compute_inverted_index(data: Iterable[tuple], t: float) -> dict[Any, list[int]]:
+def _compute_inverted_index(data: Iterable[SizedIterable], t: float) -> dict[Any, list[int]]:
     ii = {}
     for x, row in enumerate(data):
         for y, value in enumerate(row):
@@ -30,18 +32,18 @@ def _compute_inverted_index(data: Iterable[tuple], t: float) -> dict[Any, list[i
     return ii
 
 
-def _tuple_without_indexes(row: tuple, excluded: set[int]):
-    return tuple(item for idx, item in enumerate(row) if idx not in excluded)
+def _exclude_indexes(row: SizedIterable, excluded: set[int]):
+    return [item for idx, item in enumerate(row) if idx not in excluded]
 
 
 def _prepare_data(
-    data: list[tuple], sort_key: Callable[[Any], Any], excluded_indexes: set[int]
-) -> tuple[dict[int, int], list[tuple]]:
+    data: list[SizedIterable], sort_key: Callable[[Any], Any], excluded_indexes: set[int]
+) -> tuple[dict[int, int], list[list]]:
     row_sorting_param = namedtuple("row_sorting_param", ["original_position", "data"])
     sorted_rows = list(
         row_sorting_param(
             original_position=index,
-            data=tuple(sorted(_tuple_without_indexes(row, excluded_indexes), key=sort_key)),
+            data=list(sorted(_exclude_indexes(row, excluded_indexes), key=sort_key)),
         )
         for index, row in enumerate(data)
     )
@@ -56,7 +58,7 @@ def _prepare_data(
 
 
 def _generate_candidates(
-    data: list[tuple],
+    data: list[list],
     inverted_index: dict[Any, list[int]],
     t: float
 ) -> Generator[tuple[int, int], None, None]:
@@ -83,7 +85,7 @@ def _add_to_inverted_index(
 
 
 def _verify(
-    multiset: list[tuple],
+    multiset: list[list],
     x_idx: int,
     index_map: dict[int, int],
     t: float,
@@ -116,11 +118,11 @@ def _verify(
 
 
 def find_duplicates(
-    data: list[tuple],
+    data: list[list],
     t: float,
     sort_key: Callable = None,
     exclude_cols: Iterable[int] = None
-) -> set[tuple[tuple, tuple, float]]:
+) -> list[tuple[list, list, float]]:
     """Compute the similarity between the rows of a multiset."""
     if t < 0 or 1 <= t:
         raise ValueError(
@@ -136,14 +138,15 @@ def find_duplicates(
     inverted_index: dict[Any, list[tuple[int, int]]] = {}
     for x_idx, x in enumerate(multiset):
         index_map: dict[int, int] = {}
+        x_count = len(x)
         for i in range(prefix_len(x, t)):
             token = x[i]
             for y_idx, j in inverted_index.get(token, []):
-                if len(multiset[y_idx]) < t*len(x):
+                if len(multiset[y_idx]) < t * x_count:
                     continue
                 y = multiset[y_idx]
                 alpha = compute_alpha(x, y, t)
-                ubound = 1 + min(len(x)-i, len(y)-j)
+                ubound = 1 + min(x_count - i, len(y) - j)
                 left_overlap = index_map.get(y_idx, 0)
                 if left_overlap + ubound >= alpha:
                     index_map[y_idx] = left_overlap + 1
@@ -156,38 +159,52 @@ def find_duplicates(
                 continue
             successful_candidates.add((sx_idx, sy_idx))
 
-    result = set()
-
+    rs = set()
+    result = list()
     for x_idx, y_idx in successful_candidates:
         result_x = data[row_index_mapping[x_idx]]
         result_y = data[row_index_mapping[y_idx]]
         sx = set(result_x)
         sy = set(result_y)
+        unique_pair = tuple(sx|sy)
+        if unique_pair in rs:
+            continue
+        rs.add(unique_pair)
         similarity = len(sx & sy) / len(sx | sy)
-        result.add((result_x, result_y, similarity))
+        result.append((result_x, result_y, similarity))
 
     return result
 
 
-def _merge_datasets(datasets: Iterable[list[tuple]], id_col_index: int = 0) -> list[tuple]:
+def _merge_datasets(datasets: Iterable[list[list]], id_col_index: int = 0) -> list[list]:
     result = []
     for dataset_id, dataset in enumerate(datasets):
-        for record in dataset:
-            record_with_dataset_id = record[:id_col_index] + (dataset_id,) + record[id_col_index:]
-            result.append(record_with_dataset_id)
+        for original_index, record in enumerate(dataset):
+            record.insert(id_col_index, (dataset_id, original_index))
+            result.append(record)
     return result
 
 
-def find_duplicates_across(datasets: list[list[tuple]], t: float) -> set[tuple[tuple, tuple, float]]:
+def find_duplicates_across(datasets: list[list[list]], t: float) -> list[tuple[list, list, float]]:
     dataset_id_index = 0
     merged = _merge_datasets(datasets, dataset_id_index)
     raw_results = find_duplicates(merged, t, exclude_cols=[dataset_id_index])
-    results = set()
-    for dupe in raw_results:
+    results = list()
+
+    def _by_original_index(duplicate_record: tuple[list, list, float]) -> int:
+        return duplicate_record[0][dataset_id_index][1]
+
+    # iterate through duplicates by the original index of the first item in the duplicate pair
+    for dupe in sorted(raw_results, key=_by_original_index):
         x, y, sim = dupe
-        x_dataset_id = x[dataset_id_index]
-        y_dataset_id = y[dataset_id_index]
-        if x_dataset_id == y_dataset_id:
+        x_ds_info = x[dataset_id_index]
+        y_ds_info = y[dataset_id_index]
+        if x_ds_info[0] == y_ds_info[0]:
             continue
-        results.add(dupe)
+        results.append(dupe)
+
+    # clean up the column we inserted via _merge_datasets
+    for item in results:
+        del item[0][dataset_id_index]
+        del item[1][dataset_id_index]
     return results
