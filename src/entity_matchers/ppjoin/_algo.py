@@ -197,11 +197,14 @@ def find_duplicates_across(datasets: list[list[list]], t: float) -> list[tuple[l
     # iterate through duplicates by the original index of the first item in the duplicate pair
     for dupe in sorted(raw_results, key=_by_original_index):
         x, y, sim = dupe
-        x_ds_info = x[dataset_id_index]
-        y_ds_info = y[dataset_id_index]
-        if x_ds_info[0] == y_ds_info[0]:
+        x_orig_dataset = x[dataset_id_index][0]
+        y_orig_dataset = y[dataset_id_index][0]
+        if x_orig_dataset == y_orig_dataset:
             continue
-        results.append(dupe)
+        elif x_orig_dataset < y_orig_dataset:
+            results.append(dupe)
+        else:
+            results.append((y, x, sim))
 
     # clean up the column we inserted via _merge_datasets
     for item in results:
