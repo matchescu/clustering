@@ -2,7 +2,7 @@ from collections import Counter, namedtuple
 from math import ceil
 from typing import Any, Callable, Iterable, Generator, Sized
 
-from abstractions.protocols import SizedIterable
+from abstractions.protocols import IndexedIterable
 
 
 def prefix_len(x: Sized, t: float) -> int:
@@ -19,7 +19,7 @@ def _default_sort_key(token: Any) -> Any:
     return str(token)
 
 
-def _compute_inverted_index(data: Iterable[SizedIterable], t: float) -> dict[Any, list[int]]:
+def _compute_inverted_index(data: Iterable[IndexedIterable], t: float) -> dict[Any, list[int]]:
     ii = {}
     for x, row in enumerate(data):
         for y, value in enumerate(row):
@@ -32,12 +32,12 @@ def _compute_inverted_index(data: Iterable[SizedIterable], t: float) -> dict[Any
     return ii
 
 
-def _exclude_indexes(row: SizedIterable, excluded: set[int]):
+def _exclude_indexes(row: IndexedIterable, excluded: set[int]):
     return [item for idx, item in enumerate(row) if idx not in excluded]
 
 
 def _prepare_data(
-    data: list[SizedIterable], sort_key: Callable[[Any], Any], excluded_indexes: set[int]
+    data: list[IndexedIterable], sort_key: Callable[[Any], Any], excluded_indexes: set[int]
 ) -> tuple[dict[int, int], list[list]]:
     row_sorting_param = namedtuple("row_sorting_param", ["original_position", "data"])
     sorted_rows = list(
