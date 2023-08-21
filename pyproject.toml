@@ -4,10 +4,13 @@ version = "0.1.0"
 description = ""
 authors = ["Andrei Olar <andrei.olar@dpgmedia.nl>"]
 readme = "README.md"
-packages = [{include = "entity_matchers"}]
+packages = [{include = "matchescu", from="src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+certifi = "^2023.7.22"
+pandas = "^2.0.3"
+matchescu-abstractions = {path = "../abstractions"}
 
 
 [tool.poetry.group.dev.dependencies]

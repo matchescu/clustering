@@ -1,27 +1,24 @@
 import csv
+
+import pandas
 import pytest
 
 from pathlib import Path
 
-from abstractions.data_structures import Table
 
 TEST_DIR = Path(__file__).parent
 
 
-def _load_data(filename: str) -> list[list]:
-    result = []
+def _load_data(filename: str, headers: bool) -> pandas.DataFrame:
     with open(TEST_DIR / "data" / filename, "r") as csv_file:
-        reader = csv.reader(csv_file, delimiter=",")
-        for row in reader:
-            result.append(row)
-    return result
+        return pandas.read_csv(csv_file, header=1 if headers else 0)
 
 
 @pytest.fixture
-def sample_data() -> list[list]:
-    return _load_data("sample.csv")
+def subsample_a():
+    return _load_data("subsample_a.csv", False)
 
 
 @pytest.fixture
-def two_data_sets() -> list[list[list], list[list]]:
-    return [_load_data("subsample_a.csv"), _load_data("subsample_b.csv")]
+def subsample_b():
+    return _load_data("subsample_b.csv", False)
