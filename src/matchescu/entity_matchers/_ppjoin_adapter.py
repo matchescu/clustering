@@ -1,3 +1,4 @@
+import itertools
 from typing import Generator, Iterable, Callable, Optional
 
 from pandas import DataFrame
@@ -42,15 +43,23 @@ def _compute_serf(
     merge_function: Callable[[Record, Record], Record],
 ):
     serf_results = []
+    found = set()
     for r in result:
         ds1_id, r1id = r[0]
         ds2_id, r2id = r[1]
-        row0 = tuple(v for v in input_data[ds1_id].iloc[r1id, :])
-        row1 = tuple(v for v in input_data[ds2_id].iloc[r2id, :])
+        df1 = input_data[ds1_id]
+        df2 = input_data[ds2_id]
+        row0 = tuple(v for v in (df1.iloc[r1id, :]))
+        row1 = tuple(v for v in (df2.iloc[r2id, :]))
+        found |= {r[0], r[1]}
         serf_results.append(
             tuple(value for value in merge_function(row0, row1))
         )
-
+    for df_idx, dataframe in enumerate(input_data):
+        for row_idx in dataframe.index:
+            if (df_idx, row_idx) not in found:
+                record = tuple(v for v in dataframe.loc[row_idx, :])
+                serf_results.append((record,))
     for result in serf_results:
         yield result
 
