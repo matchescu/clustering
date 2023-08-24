@@ -1,9 +1,10 @@
-from typing import Generator, Iterable
+from typing import Generator, Iterable, Callable, Optional
 
 from pandas import DataFrame
 from ppjoin import ppjoin
 
 from matchescu.entity_resolution_result import EntityResolutionResult
+from matchescu.types import Record
 
 
 def _compute_fsm(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> Generator[tuple, None, None]:
@@ -35,7 +36,33 @@ def _compute_algebraic(input_data: list[DataFrame], result: Iterable[tuple[tuple
         yield partition_class
 
 
-def ppjoin_adapter(input_data: list[DataFrame]) -> EntityResolutionResult:
+def _compute_serf(
+    input_data: list[DataFrame],
+    result: Iterable[tuple[tuple]],
+    merge_function: Callable[[Record, Record], Record],
+):
+    merged_results = {}
+    for r in result:
+        ds1_id, r1id = r[0]
+        ds2_id, r2id = r[1]
+        item1 = merged_results.get(r[0], tuple(v for v in input_data[ds1_id].iloc[r1id, :]))
+        item2 = merged_results.get(r[1], tuple(v for v in input_data[ds2_id].iloc[r2id, :]))
+        merged_results[r[0]] = merge_function(item1, item2)
+        merged_results[r[1]] = merge_function(item1, item2)
+
+    # eliminate duplicate merge results
+    merged_results = {
+        tuple(v for v in value): key
+        for key, value in merged_results.items()
+    }
+    for result in merged_results:
+        yield result
+
+
+def ppjoin_adapter(
+    input_data: list[DataFrame],
+    merge_function: Optional[Callable[[Record, Record], Record]] = None,
+) -> EntityResolutionResult:
     ds = [
         [
             [v for v in set(str(value).lower() for value in row)]
@@ -48,5 +75,7 @@ def ppjoin_adapter(input_data: list[DataFrame]) -> EntityResolutionResult:
     er_result = EntityResolutionResult()
     er_result.fsm = list(_compute_fsm(input_data, result))
     er_result.algebraic = list(_compute_algebraic(input_data, result))
+    if merge_function is not None:
+        er_result.serf = list(_compute_serf(input_data, result, merge_function))
 
     return er_result
