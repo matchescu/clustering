@@ -41,26 +41,23 @@ def _compute_serf(
     result: Iterable[tuple[tuple]],
     merge_function: Callable[[Record, Record], Record],
 ):
-    merged_results = {}
+    serf_results = []
     for r in result:
         ds1_id, r1id = r[0]
         ds2_id, r2id = r[1]
-        item1 = merged_results.get(r[0], tuple(v for v in input_data[ds1_id].iloc[r1id, :]))
-        item2 = merged_results.get(r[1], tuple(v for v in input_data[ds2_id].iloc[r2id, :]))
-        merged_results[r[0]] = merge_function(item1, item2)
-        merged_results[r[1]] = merge_function(item1, item2)
+        row0 = tuple(v for v in input_data[ds1_id].iloc[r1id, :])
+        row1 = tuple(v for v in input_data[ds2_id].iloc[r2id, :])
+        serf_results.append(
+            tuple(value for value in merge_function(row0, row1))
+        )
 
-    # eliminate duplicate merge results
-    merged_results = {
-        tuple(v for v in value): key
-        for key, value in merged_results.items()
-    }
-    for result in merged_results:
+    for result in serf_results:
         yield result
 
 
 def ppjoin_adapter(
     input_data: list[DataFrame],
+    threshold: float,
     merge_function: Optional[Callable[[Record, Record], Record]] = None,
 ) -> EntityResolutionResult:
     ds = [
@@ -70,7 +67,7 @@ def ppjoin_adapter(
         ]
         for dataframe in input_data
     ]
-    result = ppjoin.join(ds, t=0.5)
+    result = ppjoin.join(ds, t=threshold)
 
     er_result = EntityResolutionResult()
     er_result.fsm = list(_compute_fsm(input_data, result))
