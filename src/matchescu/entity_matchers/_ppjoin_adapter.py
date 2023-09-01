@@ -1,11 +1,12 @@
-import itertools
+from functools import reduce
 from typing import Generator, Iterable, Callable, Optional
 
 from pandas import DataFrame
 from ppjoin import ppjoin
 
-from matchescu.entity_resolution_result import EntityResolutionResult
-from matchescu.types import Record
+from matchescu.adt.entity_resolution_result import EntityResolutionResult
+from matchescu.adt.types import Record
+from matchescu.common.partitioning import compute_partition
 
 
 def _compute_fsm(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> Generator[tuple, None, None]:
@@ -17,51 +18,36 @@ def _compute_fsm(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) ->
         yield item1, item2
 
 
-def _compute_algebraic(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> Generator[tuple, None, None]:
-    partition = {}
-    for r in result:
-        ds1_id, i = r[0]
-        ds2_id, j = r[1]
-        item1 = tuple(v for v in input_data[ds1_id].iloc[i, :])
-        item2 = tuple(v for v in input_data[ds2_id].iloc[j, :])
-        partition[r[0]] = partition.get(r[0], set()) | {item1, item2}
-        partition[r[1]] = partition.get(r[1], set()) | {item1, item2}
+def _get_partitioned_set(input_data: Iterable[DataFrame]) -> Generator[tuple, None, None]:
+    yield from (
+        (df_idx, idx)
+        for df_idx, df in enumerate(input_data)
+        for idx in df.index
+    )
 
-    # eliminate duplicate partition classes
-    partition = {
-        tuple(v for v in value): key
-        for key, value in partition.items()
-    }
 
-    for partition_class in partition:
-        yield partition_class
+def _map_to_data(input_data: list[DataFrame]) -> Callable[[Iterable[tuple]], Iterable[tuple]]:
+    def _map(equivalence_class: Iterable[tuple]) -> Iterable[tuple]:
+        ret = []
+        for df_id, row_id in equivalence_class:
+            row = tuple(value for value in input_data[df_id].iloc[row_id, :])
+            ret.append(row)
+        return ret
+    return _map
+
+
+def _compute_algebraic(input_data: list[DataFrame], partition: set) -> Generator[tuple, None, None]:
+    yield from map(_map_to_data(input_data), partition)
 
 
 def _compute_serf(
     input_data: list[DataFrame],
-    result: Iterable[tuple[tuple]],
+    partition: set,
     merge_function: Callable[[Record, Record], Record],
 ):
-    serf_results = []
-    found = set()
-    for r in result:
-        ds1_id, r1id = r[0]
-        ds2_id, r2id = r[1]
-        df1 = input_data[ds1_id]
-        df2 = input_data[ds2_id]
-        row0 = tuple(v for v in (df1.iloc[r1id, :]))
-        row1 = tuple(v for v in (df2.iloc[r2id, :]))
-        found |= {r[0], r[1]}
-        serf_results.append(
-            tuple(value for value in merge_function(row0, row1))
-        )
-    for df_idx, dataframe in enumerate(input_data):
-        for row_idx in dataframe.index:
-            if (df_idx, row_idx) not in found:
-                record = tuple(v for v in dataframe.loc[row_idx, :])
-                serf_results.append((record,))
-    for result in serf_results:
-        yield result
+    for eq_class in map(_map_to_data(input_data), partition):
+        merged_eq_class = reduce(merge_function, eq_class)
+        yield merged_eq_class
 
 
 def ppjoin_adapter(
@@ -80,8 +66,9 @@ def ppjoin_adapter(
 
     er_result = EntityResolutionResult()
     er_result.fsm = list(_compute_fsm(input_data, result))
-    er_result.algebraic = list(_compute_algebraic(input_data, result))
+    partition = compute_partition(list(_get_partitioned_set(input_data)), result)
+    er_result.algebraic = list(_compute_algebraic(input_data, partition))
     if merge_function is not None:
-        er_result.serf = list(_compute_serf(input_data, result, merge_function))
+        er_result.serf = list(_compute_serf(input_data, partition, merge_function))
 
     return er_result

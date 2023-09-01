@@ -22,3 +22,13 @@ def subsample_a():
 @pytest.fixture
 def subsample_b():
     return _load_data("subsample_b.csv", False)
+
+
+@pytest.fixture
+def sub_table_a():
+    return _load_data("subtable_a.csv", True)
+
+
+@pytest.fixture
+def sub_table_b():
+    return _load_data("subtable_b.csv", True)

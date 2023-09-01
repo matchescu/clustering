@@ -11,6 +11,7 @@ python = "^3.11"
 certifi = "^2023.7.22"
 pandas = "^2.0.3"
 matchescu-abstractions = {path = "../abstractions"}
+ppjoin = {git = "https://github.com/usc-isi-i2/ppjoin.git", rev = "0.2.0"}
 
 
 [tool.poetry.group.dev.dependencies]
