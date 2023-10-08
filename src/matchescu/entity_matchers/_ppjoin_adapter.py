@@ -66,9 +66,9 @@ def ppjoin_adapter(
 
     er_result = EntityResolutionResult()
     er_result.fsm = list(_compute_fsm(input_data, result))
-    partition = compute_partition(list(_get_partitioned_set(input_data)), result)
-    er_result.algebraic = list(_compute_algebraic(input_data, partition))
-    if merge_function is not None:
-        er_result.serf = list(_compute_serf(input_data, partition, merge_function))
+    # partition = compute_partition(list(_get_partitioned_set(input_data)), result)
+    # er_result.algebraic = list(_compute_algebraic(input_data, partition))
+    # if merge_function is not None:
+    #     er_result.serf = list(_compute_serf(input_data, partition, merge_function))
 
     return er_result
