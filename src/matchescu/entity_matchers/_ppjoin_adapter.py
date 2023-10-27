@@ -6,6 +6,7 @@ from ppjoin import ppjoin
 
 from matchescu.adt.entity_resolution_result import EntityResolutionResult
 from matchescu.adt.types import Record
+from networkx import Graph, connected_components
 from matchescu.common.partitioning import compute_partition
 
 
@@ -19,15 +20,20 @@ def _compute_fsm(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) ->
 
 
 def _compute_partition(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> frozenset:
-    partition = dict()
+    pairs = set()
     for r in result:
         ds1_id, r1id = r[0]
         ds2_id, r2id = r[1]
         item1 = tuple(v for v in input_data[ds1_id].iloc[r1id, :])
         item2 = tuple(v for v in input_data[ds2_id].iloc[r2id, :])
-        cluster = (item1, item2)
-        partition[cluster] = partition.get(cluster, 0) + 1
-    return frozenset(partition)
+        pair = (item1, item2)
+        pairs.add(pair)
+    ref_domain = set(
+        tuple(v for v in row)
+        for df in input_data
+        for _, row in df.iterrows()
+    )
+    return compute_partition(ref_domain, pairs)
 
 
 def _compute_algebraic(partition: frozenset[tuple[tuple]]) -> Generator[tuple, None, None]:
@@ -44,17 +50,34 @@ def _compute_serf(
         yield merged_eq_class
 
 
+def _remove_duplicates(dataframe: DataFrame) -> list[list[str]]:
+    return list(
+        {
+            list(str(v) for v in row): index
+            for index, row in dataframe.iterrows()
+        }
+    )
+
+def _extract_entity_references(dataframe: DataFrame) -> list[list[str]]:
+    return list(
+        list(str(v) for v in row)
+        for _, row in dataframe.iterrows()
+    )
+
+
 def ppjoin_adapter(
     input_data: list[DataFrame],
     threshold: float,
     merge_function: Optional[Callable[[Record, Record], Record]] = None,
+    model: str = "fsm",
 ) -> EntityResolutionResult:
+    extract_references = _extract_entity_references
+    if model == "algebraic":
+        extract_references = _remove_duplicates
+
     ds = [
-        [
-            [v for v in set(str(value).lower() for value in row)]
-            for index, row in dataframe.iterrows()
-        ]
-        for dataframe in input_data
+        extract_references(df)
+        for df in input_data
     ]
     result = ppjoin.join(ds, t=threshold)
 

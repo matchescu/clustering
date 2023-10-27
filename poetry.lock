@@ -52,13 +52,16 @@ files = [
 ]
 
 [[package]]
-name = "matchescu-abstractions"
+name = "matchescu-base"
 version = "0.1.0"
 description = ""
 optional = false
 python-versions = "^3.11"
 files = []
 develop = false
+
+[package.dependencies]
+networkx = "^3.2"
 
 [package.source]
 type = "directory"
@@ -291,4 +294,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "b481cccc9e9149b07b385ccc6de32079254805e2c6aa4a45bfef2f2ed2d8886c"
+content-hash = "d07e0626e6abc3d46f4f2438d4af241b1d51dd577a6c49a04a2737500cf7b473"
