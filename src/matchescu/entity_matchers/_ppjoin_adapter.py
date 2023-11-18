@@ -1,3 +1,4 @@
+import re
 from functools import reduce
 from typing import Generator, Iterable, Callable, Optional
 
@@ -6,7 +7,6 @@ from ppjoin import ppjoin
 
 from matchescu.adt.entity_resolution_result import EntityResolutionResult
 from matchescu.adt.types import Record
-from networkx import Graph, connected_components
 from matchescu.common.partitioning import compute_partition
 
 
@@ -19,30 +19,30 @@ def _compute_fsm(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) ->
         yield item1, item2
 
 
-def _compute_partition(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> frozenset:
-    pairs = set()
+def _compute_partition(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> list[list[tuple]]:
+    pairs = {}
     for r in result:
         ds1_id, r1id = r[0]
         ds2_id, r2id = r[1]
         item1 = tuple(v for v in input_data[ds1_id].iloc[r1id, :])
         item2 = tuple(v for v in input_data[ds2_id].iloc[r2id, :])
         pair = (item1, item2)
-        pairs.add(pair)
-    ref_domain = set(
-        tuple(v for v in row)
+        pairs[pair] = None
+    ref_domain = {
+        tuple(v for v in row): None
         for df in input_data
         for _, row in df.iterrows()
-    )
-    return compute_partition(ref_domain, pairs)
+    }
+    return compute_partition(list(ref_domain), list(pairs))
 
 
-def _compute_algebraic(partition: frozenset[tuple[tuple]]) -> Generator[tuple, None, None]:
+def _compute_algebraic(partition: list[list[tuple]]) -> Generator[tuple, None, None]:
     for item in partition:
         yield item
 
 
 def _compute_serf(
-    partition: frozenset[tuple[tuple]],
+    partition: list[list[tuple]],
     merge_function: Callable[[Record, Record], Record],
 ) -> Generator[tuple, None, None]:
     for cluster in partition:
@@ -50,17 +50,26 @@ def _compute_serf(
         yield merged_eq_class
 
 
+def _extract_words(row: Iterable) -> Generator[str, None, None]:
+    for item in row:
+        item_string = str(item)
+        words = re.split(r"[\b\W]+", item_string)
+        for word in words:
+            yield word
+
+
 def _remove_duplicates(dataframe: DataFrame) -> list[list[str]]:
     return list(
         {
-            list(str(v) for v in row): index
+            list(_extract_words(row)): index
             for index, row in dataframe.iterrows()
         }
     )
 
+
 def _extract_entity_references(dataframe: DataFrame) -> list[list[str]]:
     return list(
-        list(str(v) for v in row)
+        list(_extract_words(row))
         for _, row in dataframe.iterrows()
     )
 
