@@ -19,7 +19,9 @@ def _default_sort_key(token: Any) -> Any:
     return str(token)
 
 
-def _compute_inverted_index(data: Iterable[IndexedIterable], t: float) -> dict[Any, list[int]]:
+def _compute_inverted_index(
+    data: Iterable[IndexedIterable], t: float
+) -> dict[Any, list[int]]:
     ii = {}
     for x, row in enumerate(data):
         for y, value in enumerate(row):
@@ -37,7 +39,9 @@ def _exclude_indexes(row: IndexedIterable, excluded: set[int]):
 
 
 def _prepare_data(
-    data: list[IndexedIterable], sort_key: Callable[[Any], Any], excluded_indexes: set[int]
+    data: list[IndexedIterable],
+    sort_key: Callable[[Any], Any],
+    excluded_indexes: set[int],
 ) -> tuple[dict[int, int], list[list]]:
     row_sorting_param = namedtuple("row_sorting_param", ["original_position", "data"])
     sorted_rows = list(
@@ -50,7 +54,9 @@ def _prepare_data(
 
     row_index_mapping = {}
     multiset = []
-    for sorted_index, item in enumerate(sorted(sorted_rows, key=lambda row: len(row.data))):
+    for sorted_index, item in enumerate(
+        sorted(sorted_rows, key=lambda row: len(row.data))
+    ):
         multiset.append(item.data)
         row_index_mapping[sorted_index] = item.original_position
 
@@ -58,9 +64,7 @@ def _prepare_data(
 
 
 def _generate_candidates(
-    data: list[list],
-    inverted_index: dict[Any, list[int]],
-    t: float
+    data: list[list], inverted_index: dict[Any, list[int]], t: float
 ) -> Generator[tuple[int, int], None, None]:
     for i, x in enumerate(data):
         x_prefix_len = prefix_len(x, t)
@@ -74,7 +78,7 @@ def _add_to_inverted_index(
     index: dict[Any, list[tuple[int, int]]],
     token: Any,
     row_id: int,
-    token_position: int
+    token_position: int,
 ) -> dict[Any, list[tuple[int, int]]]:
     new_element = (row_id, token_position)
     if token not in index:
@@ -89,7 +93,7 @@ def _verify(
     x_idx: int,
     index_map: dict[int, int],
     t: float,
-    sort_key: Callable
+    sort_key: Callable,
 ) -> Generator[tuple[tuple, tuple, float], None, None]:
     x = multiset[x_idx]
     px = prefix_len(x, t)
@@ -101,7 +105,7 @@ def _verify(
         alpha = compute_alpha(x, y, t)
         left_overlap = index_map[y_idx]
         overlap = left_overlap
-        if sort_key(x[px-1]) < sort_key(y[py-1]):
+        if sort_key(x[px - 1]) < sort_key(y[py - 1]):
             ubound = left_overlap + len(x) - px
             if ubound >= alpha:
                 x_counter = Counter(x[px:])
@@ -121,18 +125,14 @@ def find_duplicates(
     data: list[list],
     t: float,
     sort_key: Callable = None,
-    exclude_cols: Iterable[int] = None
+    exclude_cols: Iterable[int] = None,
 ) -> list[tuple[list, list, float]]:
     """Compute the similarity between the rows of a multiset."""
     if t < 0 or 1 <= t:
-        raise ValueError(
-            f"similarity threshold '{t}' must be between [0, 1)."
-        )
+        raise ValueError(f"similarity threshold '{t}' must be between [0, 1).")
 
     sort_key = sort_key or _default_sort_key
-    row_index_mapping, multiset = _prepare_data(
-        data, sort_key, set(exclude_cols or [])
-    )
+    row_index_mapping, multiset = _prepare_data(data, sort_key, set(exclude_cols or []))
 
     successful_candidates = set()
     inverted_index: dict[Any, list[tuple[int, int]]] = {}
@@ -155,7 +155,10 @@ def find_duplicates(
             _add_to_inverted_index(inverted_index, token, x_idx, i)
 
         for sx_idx, sy_idx in _verify(multiset, x_idx, index_map, t, sort_key):
-            if (sx_idx, sy_idx) in successful_candidates or (sy_idx, sx_idx) in successful_candidates:
+            if (sx_idx, sy_idx) in successful_candidates or (
+                sy_idx,
+                sx_idx,
+            ) in successful_candidates:
                 continue
             successful_candidates.add((sx_idx, sy_idx))
 
@@ -166,7 +169,7 @@ def find_duplicates(
         result_y = data[row_index_mapping[y_idx]]
         sx = set(result_x)
         sy = set(result_y)
-        unique_pair = tuple(sx|sy)
+        unique_pair = tuple(sx | sy)
         if unique_pair in rs:
             continue
         rs.add(unique_pair)
@@ -176,7 +179,9 @@ def find_duplicates(
     return result
 
 
-def _merge_datasets(datasets: Iterable[list[list]], id_col_index: int = 0) -> list[list]:
+def _merge_datasets(
+    datasets: Iterable[list[list]], id_col_index: int = 0
+) -> list[list]:
     result = []
     for dataset_id, dataset in enumerate(datasets):
         for original_index, record in enumerate(dataset):
@@ -185,7 +190,9 @@ def _merge_datasets(datasets: Iterable[list[list]], id_col_index: int = 0) -> li
     return result
 
 
-def find_duplicates_across(datasets: list[list[list]], t: float) -> list[tuple[list, list, float]]:
+def find_duplicates_across(
+    datasets: list[list[list]], t: float
+) -> list[tuple[list, list, float]]:
     dataset_id_index = 0
     merged = _merge_datasets(datasets, dataset_id_index)
     raw_results = find_duplicates(merged, t, exclude_cols=[dataset_id_index])

@@ -6,11 +6,13 @@ from pandas import DataFrame
 from ppjoin import ppjoin
 
 from matchescu.adt.entity_resolution_result import EntityResolutionResult
-from matchescu.adt.types import Record
+from matchescu.typing._data import Record
 from matchescu.common.partitioning import compute_partition
 
 
-def _compute_fsm(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> Generator[tuple, None, None]:
+def _compute_fsm(
+    input_data: list[DataFrame], result: Iterable[tuple[tuple]]
+) -> Generator[tuple, None, None]:
     for r in result:
         ds1_id, r1id = r[0]
         ds2_id, r2id = r[1]
@@ -19,7 +21,9 @@ def _compute_fsm(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) ->
         yield item1, item2
 
 
-def _compute_partition(input_data: list[DataFrame], result: Iterable[tuple[tuple]]) -> list[list[tuple]]:
+def _compute_partition(
+    input_data: list[DataFrame], result: Iterable[tuple[tuple]]
+) -> list[list[tuple]]:
     pairs = {}
     for r in result:
         ds1_id, r1id = r[0]
@@ -29,9 +33,7 @@ def _compute_partition(input_data: list[DataFrame], result: Iterable[tuple[tuple
         pair = (item1, item2)
         pairs[pair] = None
     ref_domain = {
-        tuple(v for v in row): None
-        for df in input_data
-        for _, row in df.iterrows()
+        tuple(v for v in row): None for df in input_data for _, row in df.iterrows()
     }
     return compute_partition(list(ref_domain), list(pairs))
 
@@ -60,18 +62,12 @@ def _extract_words(row: Iterable) -> Generator[str, None, None]:
 
 def _remove_duplicates(dataframe: DataFrame) -> list[list[str]]:
     return list(
-        {
-            list(_extract_words(row)): index
-            for index, row in dataframe.iterrows()
-        }
+        {list(_extract_words(row)): index for index, row in dataframe.iterrows()}
     )
 
 
 def _extract_entity_references(dataframe: DataFrame) -> list[list[str]]:
-    return list(
-        list(_extract_words(row))
-        for _, row in dataframe.iterrows()
-    )
+    return list(list(_extract_words(row)) for _, row in dataframe.iterrows())
 
 
 def ppjoin_adapter(
@@ -84,10 +80,7 @@ def ppjoin_adapter(
     if model == "algebraic":
         extract_references = _remove_duplicates
 
-    ds = [
-        extract_references(df)
-        for df in input_data
-    ]
+    ds = [extract_references(df) for df in input_data]
     result = ppjoin.join(ds, t=threshold)
 
     er_result = EntityResolutionResult()

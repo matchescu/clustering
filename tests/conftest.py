@@ -1,5 +1,3 @@
-import csv
-
 import pandas
 import pytest
 
