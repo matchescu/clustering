@@ -1,6 +1,6 @@
 from typing import Protocol, Any
 
-from matchescu.entity_matchers.attribute_matching._match_result import MatchResult
+from matchescu.matching.attribute_matching._match_result import MatchResult
 
 
 class AttrMatchCallable(Protocol):

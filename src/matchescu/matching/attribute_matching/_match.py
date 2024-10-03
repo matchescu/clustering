@@ -1,12 +1,12 @@
 from abc import abstractmethod
 from typing import Any
 
-from matchescu.entity_matchers.attribute_matching._match_result import (
+from matchescu.matching.attribute_matching._match_result import (
     MatchResult,
     FSMatchResult,
     NBMatchResult,
 )
-from matchescu.entity_matchers.similarity._common import Similarity
+from matchescu.matching.similarity._common import Similarity
 
 
 class SimilarityThresholdMatch:

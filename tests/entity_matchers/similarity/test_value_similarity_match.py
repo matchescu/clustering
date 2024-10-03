@@ -2,8 +2,8 @@ from typing import Any
 
 import pytest
 
-from matchescu.entity_matchers.similarity import Similarity
-from matchescu.entity_matchers.attribute_matching import FSMatch, FSMatchResult
+from matchescu.matching.similarity import Similarity
+from matchescu.matching.attribute_matching import FSMatch, FSMatchResult
 
 
 class SimilarityStub(Similarity):

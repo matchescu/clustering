@@ -1,6 +1,6 @@
 import pytest
 
-from matchescu.entity_matchers.similarity import Jaro, JaroWinkler, Jaccard, Levenshtein
+from matchescu.matching.similarity import Jaro, JaroWinkler, Jaccard, Levenshtein
 
 
 @pytest.mark.parametrize(

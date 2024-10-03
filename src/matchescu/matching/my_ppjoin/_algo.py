@@ -2,7 +2,7 @@ from collections import Counter, namedtuple
 from math import ceil
 from typing import Any, Callable, Iterable, Generator, Sized
 
-from abstractions.protocols import IndexedIterable
+from base.protocols import IndexedIterable
 
 
 def prefix_len(x: Sized, t: float) -> int:

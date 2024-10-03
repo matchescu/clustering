@@ -1,6 +1,6 @@
 from typing import Any
 
-from matchescu.entity_matchers.similarity._common import Similarity
+from matchescu.matching.similarity._common import Similarity
 
 
 class ExactMatch(Similarity):
