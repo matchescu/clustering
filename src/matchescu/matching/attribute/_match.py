@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Any
 
-from matchescu.matching.attribute_matching._match_result import (
+from matchescu.matching.attribute._match_result import (
     MatchResult,
     FSMatchResult,
     NBMatchResult,

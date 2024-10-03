@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Type, Iterable
 
-from matchescu.matching.attribute_matching import AttrMatchCallable, FSMatch
+from matchescu.matching.attribute import AttrMatchCallable, FSMatch
 from matchescu.matching.similarity import (
     ExactMatch,
     Jaro,

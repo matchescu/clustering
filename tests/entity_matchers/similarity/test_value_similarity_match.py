@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 
 from matchescu.matching.similarity import Similarity
-from matchescu.matching.attribute_matching import FSMatch, FSMatchResult
+from matchescu.matching.attribute import FSMatch, FSMatchResult
 
 
 class SimilarityStub(Similarity):
