@@ -1,9 +1,12 @@
-from typing import Any
-
 import pytest
 
 from matchescu.matching.similarity import Similarity
-from matchescu.matching.attribute import FSMatch, FSMatchResult
+from matchescu.matching.attribute import (
+    TernaryResult,
+    TernarySimilarityMatchOnThreshold,
+    BinarySimilarityMatchOnThreshold,
+    BinaryResult,
+)
 
 
 class SimilarityStub(Similarity):
@@ -14,21 +17,31 @@ class SimilarityStub(Similarity):
         return self._sim_score
 
 
-def test_no_comparison_data():
-    is_match = FSMatch(SimilarityStub())
+@pytest.mark.parametrize(
+    "match_strategy,expected",
+    [
+        (TernarySimilarityMatchOnThreshold, TernaryResult.NoComparisonData),
+        (BinarySimilarityMatchOnThreshold, BinaryResult.Negative),
+    ],
+)
+def test_no_comparison_data(match_strategy, expected):
+    is_match = match_strategy(SimilarityStub())
 
-    assert is_match(None, None) == FSMatchResult.NoComparisonData
+    assert is_match(None, None) == expected
 
 
 @pytest.mark.parametrize(
-    "similarity, threshold, expected",
+    "match_strategy, similarity, threshold, expected",
     [
-        (0, 0.01, FSMatchResult.NonMatch),
-        (1, 1, FSMatchResult.Match),
-        (0.5, 0.49, FSMatchResult.Match),
+        (TernarySimilarityMatchOnThreshold, 0, 0.01, TernaryResult.NonMatch),
+        (TernarySimilarityMatchOnThreshold, 1, 1, TernaryResult.Match),
+        (TernarySimilarityMatchOnThreshold, 0.5, 0.49, TernaryResult.Match),
+        (BinarySimilarityMatchOnThreshold, 0, 0.01, BinaryResult.Negative),
+        (BinarySimilarityMatchOnThreshold, 1, 1, BinaryResult.Positive),
+        (BinarySimilarityMatchOnThreshold, 0.5, 0.49, BinaryResult.Positive),
     ],
 )
-def test_value_similarity_match(similarity, threshold, expected):
-    is_match = FSMatch(SimilarityStub(similarity), threshold)
+def test_value_similarity_match(match_strategy, similarity, threshold, expected):
+    is_match = match_strategy(SimilarityStub(similarity), threshold)
 
-    assert is_match("any value", "stub method") == expected
+    assert is_match("can pass any value", "with stubbed similarity") == expected

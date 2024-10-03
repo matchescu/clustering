@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Type, Iterable
 
-from matchescu.matching.attribute import AttrMatchCallable, FSMatch
+from matchescu.matching.attribute import AttrMatchCallable, TernaryResultMatch
 from matchescu.matching.similarity import (
     ExactMatch,
     Jaro,
@@ -36,15 +36,13 @@ class FSComparison:
             label=label,
             left_ref_key=left_key,
             right_ref_key=right_key,
-            match_strategy=FSMatch(similarity_type(*args), threshold),
+            match_strategy=TernaryResultMatch(similarity_type(*args), threshold),
         )
 
     def exact(
         self, label: str, left_key: int | str, right_key: int | str
     ) -> "FSComparison":
-        self._specs.append(
-            self._new_spec(ExactMatch, label, left_key, right_key, 1)
-        )
+        self._specs.append(self._new_spec(ExactMatch, label, left_key, right_key, 1))
         return self
 
     def jaro(
@@ -56,9 +54,7 @@ class FSComparison:
         ignore_case: bool = False,
     ) -> "FSComparison":
         self._specs.append(
-            self._new_spec(
-                Jaro, label, left_key, right_key, threshold, ignore_case
-            )
+            self._new_spec(Jaro, label, left_key, right_key, threshold, ignore_case)
         )
         return self
 
@@ -71,9 +67,11 @@ class FSComparison:
         gram_size: int | None = None,
         ignore_case: bool = False,
     ) -> "FSComparison":
-        self._specs.append(self._new_spec(
+        self._specs.append(
+            self._new_spec(
                 Jaccard, label, left_key, right_key, threshold, ignore_case, gram_size
-            ))
+            )
+        )
         return self
 
     def jaro_winkler(

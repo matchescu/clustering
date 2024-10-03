@@ -1,16 +1,23 @@
-from matchescu.matching.attribute._match import FSMatch, NBMatch
+from matchescu.matching.attribute._match import (
+    BinarySimilarityMatch,
+    BinarySimilarityMatchOnThreshold,
+    TernarySimilarityMatch,
+    TernarySimilarityMatchOnThreshold,
+)
 from matchescu.matching.attribute._match_result import (
+    BinaryResult,
     MatchResult,
-    FSMatchResult,
-    NBMatchResult,
+    TernaryResult,
 )
 from matchescu.matching.attribute._typing import AttrMatchCallable
 
 __all__ = [
     "AttrMatchCallable",
+    "BinaryResult",
+    "BinarySimilarityMatch",
+    "BinarySimilarityMatchOnThreshold",
     "MatchResult",
-    "FSMatchResult",
-    "NBMatchResult",
-    "FSMatch",
-    "NBMatch",
+    "TernaryResult",
+    "TernarySimilarityMatch",
+    "TernarySimilarityMatchOnThreshold",
 ]
