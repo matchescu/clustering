@@ -7,7 +7,10 @@ import polars as pl
 import polars.selectors as cs
 
 from matchescu.data import EntityReferenceExtraction
-from matchescu.matching.entity_reference import AttrComparisonSpec, EntityReferenceComparisonConfig
+from matchescu.matching.entity_reference import (
+    AttrComparisonSpec,
+    EntityReferenceComparisonConfig,
+)
 from matchescu.typing import DataSource, Record
 
 
@@ -36,10 +39,22 @@ class RecordLinkageDataSet:
                 self.__extract_right.entity_ids(),
             )
         )
-        df = pl.DataFrame(tuples, {"id_left": pl.Int64, "id_right": pl.Int64}, orient="row")
-        return df.lazy().with_columns([
-            pl.struct(["id_left", "id_right"]).map_elements(self._is_true_match, pl.Int8).alias("y")
-        ]).select("y").collect().to_numpy()
+        df = pl.DataFrame(
+            tuples, {"id_left": pl.Int64, "id_right": pl.Int64}, orient="row"
+        )
+        return (
+            df.lazy()
+            .with_columns(
+                [
+                    pl.struct(["id_left", "id_right"])
+                    .map_elements(self._is_true_match, pl.Int8)
+                    .alias("y")
+                ]
+            )
+            .select("y")
+            .collect()
+            .to_numpy()
+        )
 
     @property
     def target_vector(self):
@@ -48,19 +63,26 @@ class RecordLinkageDataSet:
         return self._y
 
     @staticmethod
-    def __with_col_suffix(extract: EntityReferenceExtraction, suffix: str) -> pl.DataFrame:
+    def __with_col_suffix(
+        extract: EntityReferenceExtraction, suffix: str
+    ) -> pl.DataFrame:
         df = pl.DataFrame(extract())
         return df.rename({key: f"{key}{suffix}" for key in df.columns})
 
     @staticmethod
-    def __compare_attributes(left_row: tuple, right_row: tuple, config: AttrComparisonSpec) -> int:
+    def __compare_attributes(
+        left_row: tuple, right_row: tuple, config: AttrComparisonSpec
+    ) -> int:
         a = left_row[config.left_ref_key]
         b = right_row[config.right_ref_key]
         return config.match_strategy(a, b).value
 
     @classmethod
     def __compare_entity_references(
-        cls, comparison_row: tuple, midpoint: int, config: EntityReferenceComparisonConfig
+        cls,
+        comparison_row: tuple,
+        midpoint: int,
+        config: EntityReferenceComparisonConfig,
     ) -> tuple:
         left_side = comparison_row[:midpoint]
         right_side = comparison_row[midpoint:]
@@ -70,7 +92,9 @@ class RecordLinkageDataSet:
         }
         return (result,)  # need to return a tuple
 
-    def compute_feature_matrix(self, config: EntityReferenceComparisonConfig) -> pl.DataFrame:
+    def compute_feature_matrix(
+        self, config: EntityReferenceComparisonConfig
+    ) -> pl.DataFrame:
         left = self.__with_col_suffix(self.__extract_left, "_left")
         right = self.__with_col_suffix(self.__extract_right, "_right")
 
@@ -78,17 +102,16 @@ class RecordLinkageDataSet:
         compare_entity_references = partial(
             self.__compare_entity_references, midpoint=len(left.columns), config=config
         )
-        dtype = {
-            spec.label: pl.UInt8
-            for spec in config.specs
-        }
-        return cross_product.map_rows(
-            compare_entity_references,
-            pl.Struct(dtype)
-        ).unnest("column_0").with_columns(
-            pl.struct(pl.all()).map_elements(
-                lambda values: "".join(map(str, values.values())),
-                pl.String,
-            ).alias("match_pattern")
+        dtype = {spec.label: pl.UInt8 for spec in config.specs}
+        return (
+            cross_product.map_rows(compare_entity_references, pl.Struct(dtype))
+            .unnest("column_0")
+            .with_columns(
+                pl.struct(pl.all())
+                .map_elements(
+                    lambda values: "".join(map(str, values.values())),
+                    pl.String,
+                )
+                .alias("match_pattern")
+            )
         )
-
