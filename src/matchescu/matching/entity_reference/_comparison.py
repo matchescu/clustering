@@ -1,48 +1,48 @@
-from dataclasses import dataclass
+from abc import abstractmethod
 from typing import Any, Type, Iterable
 
-from matchescu.matching.attribute import AttrMatchCallable, TernaryResultMatch
+from matchescu.matching.attribute import TernarySimilarityMatchOnThreshold
+from matchescu.matching.attribute._match import SimilarityMatch
+from matchescu.matching.entity_reference._attr_spec import AttrComparisonSpec
 from matchescu.matching.similarity import (
     ExactMatch,
     Jaro,
     Jaccard,
     JaroWinkler,
-    Levenshtein,
+    Levenshtein, Similarity,
 )
 
 
-@dataclass
-class BinaryComparisonSpec:
-    label: str
-    left_ref_key: int | str
-    right_ref_key: int | str
-    match_strategy: AttrMatchCallable
+class EntityReferenceComparisonConfig:
+    def __init__(self):
+        self.__specs = []
 
+    @classmethod
+    @abstractmethod
+    def _new_similarity_threshold_match_strategy(cls, similarity: Similarity, *args) -> SimilarityMatch:
+        pass
 
-class FSComparison:
-    def __init__(self, *args: BinaryComparisonSpec):
-        self._specs = list(*args)
-
-    @staticmethod
+    @classmethod
     def _new_spec(
+        cls,
         similarity_type: Type,
         label: str,
         left_key: int | str,
         right_key: int | str,
         threshold: float,
         *args: Any
-    ) -> BinaryComparisonSpec:
-        return BinaryComparisonSpec(
+    ) -> AttrComparisonSpec:
+        return AttrComparisonSpec(
             label=label,
             left_ref_key=left_key,
             right_ref_key=right_key,
-            match_strategy=TernaryResultMatch(similarity_type(*args), threshold),
+            match_strategy=cls._new_similarity_threshold_match_strategy(similarity_type(*args), threshold),
         )
 
     def exact(
         self, label: str, left_key: int | str, right_key: int | str
-    ) -> "FSComparison":
-        self._specs.append(self._new_spec(ExactMatch, label, left_key, right_key, 1))
+    ) -> "EntityReferenceComparisonConfig":
+        self.__specs.append(self._new_spec(ExactMatch, label, left_key, right_key, 1))
         return self
 
     def jaro(
@@ -52,8 +52,8 @@ class FSComparison:
         right_key: int | str,
         threshold=0.5,
         ignore_case: bool = False,
-    ) -> "FSComparison":
-        self._specs.append(
+    ) -> "EntityReferenceComparisonConfig":
+        self.__specs.append(
             self._new_spec(Jaro, label, left_key, right_key, threshold, ignore_case)
         )
         return self
@@ -66,8 +66,8 @@ class FSComparison:
         threshold: float = 0.5,
         gram_size: int | None = None,
         ignore_case: bool = False,
-    ) -> "FSComparison":
-        self._specs.append(
+    ) -> "EntityReferenceComparisonConfig":
+        self.__specs.append(
             self._new_spec(
                 Jaccard, label, left_key, right_key, threshold, ignore_case, gram_size
             )
@@ -81,8 +81,8 @@ class FSComparison:
         right_key: int | str,
         threshold=0.5,
         ignore_case: bool = False,
-    ) -> "FSComparison":
-        self._specs.append(
+    ) -> "EntityReferenceComparisonConfig":
+        self.__specs.append(
             self._new_spec(
                 JaroWinkler, label, left_key, right_key, threshold, ignore_case
             )
@@ -96,8 +96,8 @@ class FSComparison:
         right_key: int | str,
         threshold=0.5,
         ignore_case: bool = False,
-    ) -> "FSComparison":
-        self._specs.append(
+    ) -> "EntityReferenceComparisonConfig":
+        self.__specs.append(
             self._new_spec(
                 Levenshtein, label, left_key, right_key, threshold, ignore_case
             )
@@ -105,5 +105,11 @@ class FSComparison:
         return self
 
     @property
-    def specs(self) -> Iterable[BinaryComparisonSpec]:
-        return self._specs
+    def specs(self) -> Iterable[AttrComparisonSpec]:
+        return self.__specs
+
+
+class FellegiSunterComparison(EntityReferenceComparisonConfig):
+    @classmethod
+    def _new_similarity_threshold_match_strategy(cls, similarity: Similarity, *args) -> SimilarityMatch:
+        return TernarySimilarityMatchOnThreshold(similarity, *args)
