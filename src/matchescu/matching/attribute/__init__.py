@@ -1,12 +1,13 @@
 from matchescu.matching.attribute._match import (
     BinarySimilarityMatch,
     BinarySimilarityMatchOnThreshold,
+    RawMatch,
+    SimilarityMatch,
     TernarySimilarityMatch,
     TernarySimilarityMatchOnThreshold,
 )
 from matchescu.matching.attribute._match_result import (
     BinaryResult,
-    MatchResult,
     TernaryResult,
 )
 from matchescu.matching.attribute._typing import AttrMatchCallable
@@ -16,7 +17,8 @@ __all__ = [
     "BinaryResult",
     "BinarySimilarityMatch",
     "BinarySimilarityMatchOnThreshold",
-    "MatchResult",
+    "RawMatch",
+    "SimilarityMatch",
     "TernaryResult",
     "TernarySimilarityMatch",
     "TernarySimilarityMatchOnThreshold",
