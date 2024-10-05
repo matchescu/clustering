@@ -75,7 +75,7 @@ class RecordLinkageDataSet:
     ) -> int:
         a = left_row[config.left_ref_key]
         b = right_row[config.right_ref_key]
-        return config.match_strategy(a, b).value
+        return config.match_strategy(a, b)
 
     @classmethod
     def __compare_entity_references(
@@ -103,15 +103,6 @@ class RecordLinkageDataSet:
             self.__compare_entity_references, midpoint=len(left.columns), config=config
         )
         dtype = {spec.label: pl.UInt8 for spec in config.specs}
-        return (
-            cross_product.map_rows(compare_entity_references, pl.Struct(dtype))
-            .unnest("column_0")
-            .with_columns(
-                pl.struct(pl.all())
-                .map_elements(
-                    lambda values: "".join(map(str, values.values())),
-                    pl.String,
-                )
-                .alias("match_pattern")
-            )
-        )
+        return cross_product.map_rows(
+            compare_entity_references, pl.Struct(dtype)
+        ).unnest("column_0")

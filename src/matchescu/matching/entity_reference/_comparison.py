@@ -5,7 +5,7 @@ from matchescu.matching.attribute import (
     BinarySimilarityMatchOnThreshold,
     RawMatch,
     SimilarityMatch,
-    TernarySimilarityMatchOnThreshold
+    TernarySimilarityMatchOnThreshold,
 )
 from matchescu.matching.entity_reference._attr_spec import AttrComparisonSpec
 from matchescu.matching.similarity import (
