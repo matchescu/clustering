@@ -113,6 +113,12 @@ class EntityReferenceComparisonConfig:
         )
         return self
 
+    def __iter__(self):
+        return self.__specs
+
+    def __len__(self):
+        return len(self.__specs)
+
     @property
     def specs(self) -> Iterable[AttrComparisonSpec]:
         return self.__specs
