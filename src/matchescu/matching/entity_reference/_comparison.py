@@ -1,15 +1,20 @@
 from abc import abstractmethod
 from typing import Any, Type, Iterable
 
-from matchescu.matching.attribute import TernarySimilarityMatchOnThreshold
-from matchescu.matching.attribute._match import SimilarityMatch
+from matchescu.matching.attribute import (
+    BinarySimilarityMatchOnThreshold,
+    RawMatch,
+    SimilarityMatch,
+    TernarySimilarityMatchOnThreshold,
+)
 from matchescu.matching.entity_reference._attr_spec import AttrComparisonSpec
 from matchescu.matching.similarity import (
     ExactMatch,
     Jaro,
     Jaccard,
     JaroWinkler,
-    Levenshtein, Similarity,
+    Levenshtein,
+    Similarity,
 )
 
 
@@ -19,7 +24,9 @@ class EntityReferenceComparisonConfig:
 
     @classmethod
     @abstractmethod
-    def _new_similarity_threshold_match_strategy(cls, similarity: Similarity, *args) -> SimilarityMatch:
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *args
+    ) -> SimilarityMatch:
         pass
 
     @classmethod
@@ -36,7 +43,9 @@ class EntityReferenceComparisonConfig:
             label=label,
             left_ref_key=left_key,
             right_ref_key=right_key,
-            match_strategy=cls._new_similarity_threshold_match_strategy(similarity_type(*args), threshold),
+            match_strategy=cls._new_similarity_threshold_match_strategy(
+                similarity_type(*args), threshold
+            ),
         )
 
     def exact(
@@ -104,6 +113,12 @@ class EntityReferenceComparisonConfig:
         )
         return self
 
+    def __iter__(self):
+        return self.__specs
+
+    def __len__(self):
+        return len(self.__specs)
+
     @property
     def specs(self) -> Iterable[AttrComparisonSpec]:
         return self.__specs
@@ -111,5 +126,23 @@ class EntityReferenceComparisonConfig:
 
 class FellegiSunterComparison(EntityReferenceComparisonConfig):
     @classmethod
-    def _new_similarity_threshold_match_strategy(cls, similarity: Similarity, *args) -> SimilarityMatch:
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *args
+    ) -> SimilarityMatch:
         return TernarySimilarityMatchOnThreshold(similarity, *args)
+
+
+class NaiveBayesComparison(EntityReferenceComparisonConfig):
+    @classmethod
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *args
+    ) -> SimilarityMatch:
+        return BinarySimilarityMatchOnThreshold(similarity, *args)
+
+
+class RawComparison(EntityReferenceComparisonConfig):
+    @classmethod
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *_
+    ) -> SimilarityMatch:
+        return RawMatch(similarity)

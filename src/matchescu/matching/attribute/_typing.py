@@ -1,8 +1,6 @@
-from typing import Protocol, Any
+from typing import Callable, Any
 
-from matchescu.matching.attribute._match_result import MatchResult
+from matchescu.matching.attribute._match import TResult
 
 
-class AttrMatchCallable(Protocol):
-    def __call__(self, a: Any, b: Any) -> MatchResult:
-        pass
+AttrMatchCallable = Callable[[Any, Any], TResult]
