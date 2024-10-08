@@ -13,6 +13,11 @@ def _load_data(filename: str, headers: bool) -> pandas.DataFrame:
 
 
 @pytest.fixture
+def data_dir():
+    return TEST_DIR / "data"
+
+
+@pytest.fixture
 def subsample_a():
     return _load_data("subsample_a.csv", False)
 
