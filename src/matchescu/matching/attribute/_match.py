@@ -2,13 +2,12 @@ from abc import abstractmethod, ABCMeta
 from typing import Any, Optional, TypeVar, Generic
 
 from matchescu.matching.attribute._match_result import (
-    MatchResult,
     TernaryResult,
     BinaryResult,
 )
 from matchescu.matching.similarity._common import Similarity
 
-TResult = TypeVar("TResult", bound=MatchResult, contravariant=True)
+TResult = TypeVar("TResult", contravariant=True)
 
 
 class SimilarityMatch(Generic[TResult]):
@@ -121,3 +120,11 @@ class BinarySimilarityMatchOnThreshold(
         super().__init__(
             similarity, BinaryResult.Positive, BinaryResult.Negative, threshold
         )
+
+
+class RawMatch(SimilarityMatch[float]):
+    def _to_match_result(self) -> float:
+        return self.similarity
+
+    def _handle_missing_data(self, a: Any, b: Any) -> Optional[float]:
+        return None  # defer handling to the similarity function

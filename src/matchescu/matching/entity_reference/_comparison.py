@@ -1,10 +1,11 @@
 from abc import abstractmethod
 from typing import Any, Type, Iterable
 
-from matchescu.matching.attribute import TernarySimilarityMatchOnThreshold
-from matchescu.matching.attribute._match import (
-    SimilarityMatch,
+from matchescu.matching.attribute import (
     BinarySimilarityMatchOnThreshold,
+    RawMatch,
+    SimilarityMatch,
+    TernarySimilarityMatchOnThreshold,
 )
 from matchescu.matching.entity_reference._attr_spec import AttrComparisonSpec
 from matchescu.matching.similarity import (
@@ -112,6 +113,12 @@ class EntityReferenceComparisonConfig:
         )
         return self
 
+    def __iter__(self):
+        return self.__specs
+
+    def __len__(self):
+        return len(self.__specs)
+
     @property
     def specs(self) -> Iterable[AttrComparisonSpec]:
         return self.__specs
@@ -131,3 +138,11 @@ class NaiveBayesComparison(EntityReferenceComparisonConfig):
         cls, similarity: Similarity, *args
     ) -> SimilarityMatch:
         return BinarySimilarityMatchOnThreshold(similarity, *args)
+
+
+class RawComparison(EntityReferenceComparisonConfig):
+    @classmethod
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *_
+    ) -> SimilarityMatch:
+        return RawMatch(similarity)
