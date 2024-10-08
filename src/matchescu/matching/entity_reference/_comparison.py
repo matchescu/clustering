@@ -2,14 +2,18 @@ from abc import abstractmethod
 from typing import Any, Type, Iterable
 
 from matchescu.matching.attribute import TernarySimilarityMatchOnThreshold
-from matchescu.matching.attribute._match import SimilarityMatch
+from matchescu.matching.attribute._match import (
+    SimilarityMatch,
+    BinarySimilarityMatchOnThreshold,
+)
 from matchescu.matching.entity_reference._attr_spec import AttrComparisonSpec
 from matchescu.matching.similarity import (
     ExactMatch,
     Jaro,
     Jaccard,
     JaroWinkler,
-    Levenshtein, Similarity,
+    Levenshtein,
+    Similarity,
 )
 
 
@@ -19,7 +23,9 @@ class EntityReferenceComparisonConfig:
 
     @classmethod
     @abstractmethod
-    def _new_similarity_threshold_match_strategy(cls, similarity: Similarity, *args) -> SimilarityMatch:
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *args
+    ) -> SimilarityMatch:
         pass
 
     @classmethod
@@ -36,7 +42,9 @@ class EntityReferenceComparisonConfig:
             label=label,
             left_ref_key=left_key,
             right_ref_key=right_key,
-            match_strategy=cls._new_similarity_threshold_match_strategy(similarity_type(*args), threshold),
+            match_strategy=cls._new_similarity_threshold_match_strategy(
+                similarity_type(*args), threshold
+            ),
         )
 
     def exact(
@@ -111,5 +119,15 @@ class EntityReferenceComparisonConfig:
 
 class FellegiSunterComparison(EntityReferenceComparisonConfig):
     @classmethod
-    def _new_similarity_threshold_match_strategy(cls, similarity: Similarity, *args) -> SimilarityMatch:
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *args
+    ) -> SimilarityMatch:
         return TernarySimilarityMatchOnThreshold(similarity, *args)
+
+
+class NaiveBayesComparison(EntityReferenceComparisonConfig):
+    @classmethod
+    def _new_similarity_threshold_match_strategy(
+        cls, similarity: Similarity, *args
+    ) -> SimilarityMatch:
+        return BinarySimilarityMatchOnThreshold(similarity, *args)

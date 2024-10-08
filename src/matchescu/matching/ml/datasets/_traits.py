@@ -30,15 +30,12 @@ def _process_currency(value: Any) -> float | None:
 
 
 class RecordExtractionTrait:
-    def __init__(self, mapping: Callable[[Any], Any], keys: list[int|str]) -> None:
+    def __init__(self, mapping: Callable[[Any], Any], keys: list[int | str]) -> None:
         self.__mapping = mapping
         self.__keys = keys
 
     def __call__(self, item: Record) -> tuple:
-        return tuple(
-            self.__mapping(item[key])
-            for key in self.__keys
-        )
+        return tuple(self.__mapping(item[key]) for key in self.__keys)
 
 
 class Traits:
