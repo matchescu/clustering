@@ -1,7 +1,10 @@
 import polars as pl
 import pytest
 
-from matchescu.matching.entity_reference._comparison import FellegiSunterComparison
+from matchescu.matching.entity_reference._comparison import (
+    FellegiSunterComparison,
+    EntityReferenceComparisonConfig,
+)
 from matchescu.matching.ml.datasets import CsvDataSource, Traits, RecordLinkageDataSet
 
 
@@ -34,7 +37,7 @@ def record_linkage_dataset(left_source, right_source, true_matches):
 
 
 @pytest.fixture
-def comparison_config():
+def comparison_config() -> EntityReferenceComparisonConfig:
     return (
         FellegiSunterComparison()
         .jaccard("name", 1, 1)
@@ -58,4 +61,4 @@ def test_feature_matrix(
     expected_size = len(left_source) * len(right_source)
     result = record_linkage_dataset.compute_feature_matrix(comparison_config)
 
-    assert result.shape == (expected_size, 4)
+    assert result.shape == (expected_size, len(comparison_config))

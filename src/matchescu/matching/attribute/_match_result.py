@@ -1,15 +1,7 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class MatchResult(Enum):
-    def __repr__(self):
-        return f"{self.value} - {self.name.lower()}"
-
-    def __str__(self):
-        return str(self.value)
-
-
-class TernaryResult(MatchResult):
+class TernaryResult(IntEnum):
     """Enumerates possible match results inspired by the Fellegi-Sunter model."""
 
     NonMatch = 0
@@ -17,7 +9,7 @@ class TernaryResult(MatchResult):
     NoComparisonData = 2
 
 
-class BinaryResult(MatchResult):
+class BinaryResult(IntEnum):
     """Enumerates values that can be used with a Naive Bayes classifier."""
 
     Negative = -1
