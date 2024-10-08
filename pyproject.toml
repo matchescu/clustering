@@ -7,18 +7,19 @@ readme = "README.md"
 packages = [{include = "matchescu", from="src"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 certifi = "^2023.7.22"
 pandas = "^2.2.3"
 ppjoin = {git = "https://github.com/usc-isi-i2/ppjoin.git", rev = "0.2.0"}
 polars = "^1.8.2"
 jellyfish = "^1.1.0"
-matchescu-base = {path = "../abstractions"}
 numpy = "^2.1.1"
+matchescu-base = {path = "../base"}
+scikit-learn = "^1.5.2"
 
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.2.2"
+pytest = "^8.3.3"
 notebook = "^7.2.2"
 plotly = "^5.24.1"
 black = "^24.8.0"

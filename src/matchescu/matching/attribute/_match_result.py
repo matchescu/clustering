@@ -9,7 +9,7 @@ class MatchResult(Enum):
         return str(self.value)
 
 
-class FSMatchResult(MatchResult):
+class TernaryResult(MatchResult):
     """Enumerates possible match results inspired by the Fellegi-Sunter model."""
 
     NonMatch = 0
@@ -17,7 +17,7 @@ class FSMatchResult(MatchResult):
     NoComparisonData = 2
 
 
-class NBMatchResult(MatchResult):
+class BinaryResult(MatchResult):
     """Enumerates values that can be used with a Naive Bayes classifier."""
 
     Negative = -1

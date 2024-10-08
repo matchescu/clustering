@@ -1,6 +1,6 @@
 import pytest
 
-from matchescu.entity_matchers import ppjoin_adapter
+from matchescu.matching import ppjoin_adapter
 
 
 def test_fsm_is_list_of_pairs(sub_table_a, sub_table_b):

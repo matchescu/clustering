@@ -7,7 +7,7 @@ from jellyfish import (
     jaro_winkler_similarity,
     levenshtein_distance,
 )
-from matchescu.entity_matchers.similarity._common import Similarity
+from matchescu.matching.similarity._common import Similarity
 
 
 class StringSimilarity(Similarity, metaclass=ABCMeta):
