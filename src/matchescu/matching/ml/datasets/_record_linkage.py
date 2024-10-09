@@ -30,7 +30,7 @@ class Sampling(metaclass=ABCMeta):
         self._target_col = target_col_name
 
     @abstractmethod
-    def _process_comparison(
+    def _process_cross_join_record(
         self, left: EntityReference, right: EntityReference
     ) -> dict:
         pass
@@ -38,7 +38,7 @@ class Sampling(metaclass=ABCMeta):
     def __call__(self, cross_join_row: tuple, divider: int) -> tuple[dict]:
         left_side = cross_join_row[:divider]
         right_side = cross_join_row[divider:]
-        result = self._process_comparison(left_side, right_side)
+        result = self._process_cross_join_record(left_side, right_side)
         result[self._target_col] = int(
             (self._left_id(left_side), self._right_id(right_side)) in self._gt
         )
@@ -56,7 +56,7 @@ class AttributeComparison(Sampling):
         b = right_ref[config.right_ref_key]
         return config.match_strategy(a, b)
 
-    def _process_comparison(
+    def _process_cross_join_record(
         self, left: EntityReference, right: EntityReference
     ) -> dict:
         return {
@@ -84,7 +84,7 @@ class PatternEncodedComparison(Sampling):
         possible_outcomes = tuple(range(self._possible_outcomes))
         yield from product(possible_outcomes, repeat=len(self._config))
 
-    def _process_comparison(
+    def _process_cross_join_record(
         self, left: EntityReference, right: EntityReference
     ) -> dict:
         comparison_results = [
@@ -161,14 +161,12 @@ class RecordLinkageDataSet:
         )
         return self
 
-    def create_comparison_matrix(self) -> "RecordLinkageDataSet":
+    def cross_sources(self) -> "RecordLinkageDataSet":
         if self.__sample_factory is None:
             raise ValueError("specify type of sampling")
         left = self.__with_col_suffix(self.__extract_left, "_left")
         right = self.__with_col_suffix(self.__extract_right, "_right")
-        cross_product = left.join(right, how="cross")
+        cross_join = left.join(right, how="cross")
         sample_factory = partial(self.__sample_factory, divider=len(left.columns))
-        self.__comparison_data = cross_product.map_rows(sample_factory).unnest(
-            "column_0"
-        )
+        self.__comparison_data = cross_join.map_rows(sample_factory).unnest("column_0")
         return self

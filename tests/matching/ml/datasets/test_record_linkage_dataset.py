@@ -46,7 +46,7 @@ def attr_comparison_rl(left_source, right_source, true_matches, comparison_confi
     return (
         RecordLinkageDataSet(left_source, right_source, true_matches)
         .attr_compare(comparison_config)
-        .create_comparison_matrix()
+        .cross_sources()
     )
 
 
@@ -59,7 +59,7 @@ def pm_comparison_rl(
     return (
         RecordLinkageDataSet(left_source, right_source, true_matches)
         .pattern_encoded(comparison_config, request.param)
-        .create_comparison_matrix()
+        .cross_sources()
     )
 
 
