@@ -46,7 +46,9 @@ class RecordLinkageDataSet:
 
     @staticmethod
     def __compare_attr_values(
-        left_ref: EntityReference, right_ref: EntityReference, config: AttrComparisonSpec
+        left_ref: EntityReference,
+        right_ref: EntityReference,
+        config: AttrComparisonSpec,
     ) -> int:
         a = left_ref[config.left_ref_key]
         b = right_ref[config.right_ref_key]
