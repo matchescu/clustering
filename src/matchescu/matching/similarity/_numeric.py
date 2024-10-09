@@ -5,7 +5,7 @@ from typing import Any
 from matchescu.matching.similarity import Similarity
 
 
-class RangeSimilarity(Similarity):
+class BoundedNumericDifferenceSimilarity(Similarity):
     __SUPPORTED_TYPES = (int, float, Decimal)
 
     def __init__(self, max_diff: float = 1.0) -> None:
