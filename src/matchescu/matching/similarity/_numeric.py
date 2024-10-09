@@ -12,7 +12,9 @@ class BoundedNumericDifferenceSimilarity(Similarity):
         self.__max_diff = max_diff
 
     def _compute_similarity(self, a: Any, b: Any) -> float:
-        if not isinstance(a, self.__SUPPORTED_TYPES) or not isinstance(b, self.__SUPPORTED_TYPES):
+        if not isinstance(a, self.__SUPPORTED_TYPES) or not isinstance(
+            b, self.__SUPPORTED_TYPES
+        ):
             return 0
         diff = abs(a - b)
         if diff > self.__max_diff:
