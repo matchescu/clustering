@@ -1,3 +1,4 @@
+from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Hashable
 
 import polars as pl
@@ -10,7 +11,7 @@ from matchescu.matching.entity_reference import (
 from matchescu.typing import DataSource, Record, EntityReference
 
 
-class AttributeComparison:
+class SampleFactory(metaclass=ABCMeta):
     def __init__(
         self,
         ground_truth: set[tuple[Hashable, Hashable]],
@@ -27,6 +28,23 @@ class AttributeComparison:
         self._right_id = right_id
         self._target_col = target_col_name
 
+    @abstractmethod
+    def _process_comparison(
+        self, left: EntityReference, right: EntityReference
+    ) -> dict:
+        pass
+
+    def __call__(self, cross_join_row: tuple) -> tuple[dict]:
+        left_side = cross_join_row[: self._row_sep]
+        right_side = cross_join_row[self._row_sep :]
+        result = self._process_comparison(left_side, right_side)
+        result[self._target_col] = int(
+            (self._left_id(left_side), self._right_id(right_side)) in self._gt
+        )
+        return (result,)  # need to return a tuple
+
+
+class AttributeComparison(SampleFactory):
     @staticmethod
     def __compare_attr_values(
         left_ref: EntityReference,
@@ -37,17 +55,13 @@ class AttributeComparison:
         b = right_ref[config.right_ref_key]
         return config.match_strategy(a, b)
 
-    def __call__(self, sample: tuple) -> tuple[dict]:
-        left_side = sample[: self._row_sep]
-        right_side = sample[self._row_sep :]
-        result = {
-            spec.label: self.__compare_attr_values(left_side, right_side, spec)
+    def _process_comparison(
+        self, left: EntityReference, right: EntityReference
+    ) -> dict:
+        return {
+            spec.label: self.__compare_attr_values(left, right, spec)
             for spec in self._config.specs
         }
-        result[self._target_col] = int(
-            (self._left_id(left_side), self._right_id(right_side)) in self._gt
-        )
-        return (result,)  # need to return a tuple
 
 
 class RecordLinkageDataSet:
@@ -86,12 +100,12 @@ class RecordLinkageDataSet:
     def create_comparison_matrix(
         self,
         config: EntityReferenceComparisonConfig,
-        reference_comparer: Callable[[tuple], tuple[dict]] | None = None,
+        sample_factory: Callable[[tuple], tuple[dict]] | None = None,
     ) -> "RecordLinkageDataSet":
         left = self.__with_col_suffix(self.__extract_left, "_left")
         right = self.__with_col_suffix(self.__extract_right, "_right")
         cross_product = left.join(right, how="cross")
-        reference_comparer = reference_comparer or AttributeComparison(
+        sample_factory = sample_factory or AttributeComparison(
             self.__true_matches,
             config,
             len(left.columns),
@@ -99,7 +113,7 @@ class RecordLinkageDataSet:
             self.__extract_right.identify,
             self.__TARGET_COL,
         )
-        self.__comparison_data = cross_product.map_rows(reference_comparer).unnest(
+        self.__comparison_data = cross_product.map_rows(sample_factory).unnest(
             "column_0"
         )
         return self
