@@ -1211,7 +1211,7 @@ files = [
 
 [[package]]
 name = "matchescu-base"
-version = "0.6.0"
+version = "0.7.0"
 description = ""
 optional = false
 python-versions = "^3.11"

@@ -14,8 +14,8 @@ ppjoin = {git = "https://github.com/usc-isi-i2/ppjoin.git", rev = "0.2.0"}
 polars = "^1.8.2"
 jellyfish = "^1.1.0"
 numpy = "^2.1.1"
-matchescu-base = {path = "../base"}
 scikit-learn = "^1.5.2"
+matchescu-base = {path = "../base"}
 
 
 [tool.poetry.group.dev.dependencies]
