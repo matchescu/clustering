@@ -59,6 +59,6 @@ def test_feature_matrix(
     record_linkage_dataset, left_source, right_source, comparison_config
 ):
     expected_size = len(left_source) * len(right_source)
-    result = record_linkage_dataset.compute_feature_matrix(comparison_config)
+    result = record_linkage_dataset.create_comparison_matrix(comparison_config)
 
     assert result.shape == (expected_size, len(comparison_config))
