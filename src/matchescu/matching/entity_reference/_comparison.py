@@ -9,6 +9,7 @@ from matchescu.matching.attribute import (
 )
 from matchescu.matching.entity_reference._attr_spec import AttrComparisonSpec
 from matchescu.matching.similarity import (
+    BoundedNumericDifferenceSimilarity,
     ExactMatch,
     Jaro,
     Jaccard,
@@ -53,6 +54,25 @@ class EntityReferenceComparisonConfig:
     ) -> "EntityReferenceComparisonConfig":
         self.__specs.append(self._new_spec(ExactMatch, label, left_key, right_key, 1))
         return self
+
+    def diff(
+        self,
+        label: str,
+        left_key: int | str,
+        right_key: int | str,
+        threshold: float = 0.5,
+        max_diff: float = 1.0,
+    ) -> "EntityReferenceComparisonConfig":
+        self.__specs.append(
+            self._new_spec(
+                BoundedNumericDifferenceSimilarity,
+                label,
+                left_key,
+                right_key,
+                threshold,
+                max_diff,
+            )
+        )
 
     def jaro(
         self,
