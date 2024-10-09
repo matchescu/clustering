@@ -32,11 +32,6 @@ def true_matches(dataset_dir):
 
 
 @pytest.fixture
-def record_linkage_dataset(left_source, right_source, true_matches):
-    return RecordLinkageDataSet(left_source, right_source, true_matches)
-
-
-@pytest.fixture
 def comparison_config() -> EntityReferenceComparisonConfig:
     return (
         FellegiSunterComparison()
@@ -46,10 +41,17 @@ def comparison_config() -> EntityReferenceComparisonConfig:
     )
 
 
+@pytest.fixture
+def record_linkage_dataset(left_source, right_source, true_matches, comparison_config):
+    return RecordLinkageDataSet(
+        left_source, right_source, true_matches
+    ).create_comparison_matrix(comparison_config)
+
+
 def test_target_vector(record_linkage_dataset, left_source, right_source, true_matches):
     expected_size = len(left_source) * len(right_source)
 
-    result = record_linkage_dataset._compute_target_vector()
+    result = record_linkage_dataset.target_vector.to_numpy()
 
     assert len(result) == expected_size
     assert len(result[result == 1]) == len(true_matches)
@@ -59,6 +61,6 @@ def test_feature_matrix(
     record_linkage_dataset, left_source, right_source, comparison_config
 ):
     expected_size = len(left_source) * len(right_source)
-    result = record_linkage_dataset.create_comparison_matrix(comparison_config)
+    result = record_linkage_dataset.feature_matrix
 
     assert result.shape == (expected_size, len(comparison_config))
