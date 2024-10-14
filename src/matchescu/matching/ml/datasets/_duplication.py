@@ -1,30 +1,25 @@
-import math
-from abc import ABCMeta, abstractmethod
 from functools import partial
-from itertools import product
-from typing import Any, Callable, Hashable, Generator
+from typing import Any
 
 import polars as pl
 
 from matchescu.data import EntityReferenceExtraction
 from matchescu.matching.entity_reference import (
-    AttrComparisonSpec,
     EntityReferenceComparisonConfig,
 )
-from matchescu.typing import DataSource, Record, EntityReference
+from matchescu.matching.ml.datasets._sampling import AttributeComparison, PatternEncodedComparison
+from matchescu.typing import DataSource, Record
 
 
-class RecordLinkageDataSet:
+class DuplicationDataSet:
     __TARGET_COL = "y"
 
     def __init__(
         self,
-        left: DataSource[Record],
-        right: DataSource[Record],
+        source: DataSource[Record],
         ground_truth: set[tuple[Any, Any]],
     ) -> None:
-        self.__extract_left = EntityReferenceExtraction(left, lambda ref: ref[0])
-        self.__extract_right = EntityReferenceExtraction(right, lambda ref: ref[0])
+        self.__extract = EntityReferenceExtraction(source, lambda ref: ref[0])
         self.__true_matches = ground_truth
         self.__comparison_data = None
         self.__sample_factory = None
@@ -50,35 +45,50 @@ class RecordLinkageDataSet:
 
     def attr_compare(
         self, config: EntityReferenceComparisonConfig
-    ) -> "RecordLinkageDataSet":
+    ) -> "DuplicationDataSet":
         self.__sample_factory = AttributeComparison(
             self.__true_matches,
             config,
-            self.__extract_left.identify,
-            self.__extract_right.identify,
+            self.__extract.identify,
+            self.__extract.identify,
             self.__TARGET_COL,
         )
         return self
 
     def pattern_encoded(
         self, config: EntityReferenceComparisonConfig, possible_outcomes: int = 2
-    ) -> "RecordLinkageDataSet":
+    ) -> "DuplicationDataSet":
         self.__sample_factory = PatternEncodedComparison(
             self.__true_matches,
             config,
-            self.__extract_left.identify,
-            self.__extract_right.identify,
+            self.__extract.identify,
+            self.__extract.identify,
             self.__TARGET_COL,
             possible_outcomes,
         )
         return self
 
-    def cross_sources(self) -> "RecordLinkageDataSet":
+    def cross_sources(self) -> "DuplicationDataSet":
         if self.__sample_factory is None:
             raise ValueError("specify type of sampling")
-        left = self.__with_col_suffix(self.__extract_left, "_left")
-        right = self.__with_col_suffix(self.__extract_right, "_right")
-        cross_join = left.join(right, how="cross")
-        sample_factory = partial(self.__sample_factory, divider=len(left.columns))
-        self.__comparison_data = cross_join.map_rows(sample_factory).unnest("column_0")
+        source = list(self.__extract())
+        if len(source) < 1:
+            raise ValueError("no data")
+
+        mid = len(source[0])
+        data = []
+        for i, left_row in enumerate(source):
+            for j in range(i+1, len(source)):
+                row = {
+                    f"left_column_{idx+1}": value
+                    for idx, value in enumerate(left_row)
+                }
+                row.update({
+                    f"right_column_{idx + 1}": value
+                    for idx, value in enumerate(source[j])
+                })
+                data.append(row)
+        sample_factory = partial(self.__sample_factory, divider=mid)
+        df = pl.DataFrame(data)
+        self.__comparison_data = df.map_rows(sample_factory).unnest("column_0")
         return self

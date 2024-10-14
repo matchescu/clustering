@@ -60,3 +60,5 @@ class Traits:
 
     def __iter__(self) -> Iterator[Trait]:
         return iter(self._traits)
+
+
