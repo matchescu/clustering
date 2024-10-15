@@ -11,7 +11,7 @@ from matchescu.matching.ml.datasets._sampling import AttributeComparison, Patter
 from matchescu.typing import DataSource, Record
 
 
-class DuplicationDataSet:
+class DeduplicationDataSet:
     __TARGET_COL = "y"
 
     def __init__(
@@ -45,7 +45,7 @@ class DuplicationDataSet:
 
     def attr_compare(
         self, config: EntityReferenceComparisonConfig
-    ) -> "DuplicationDataSet":
+    ) -> "DeduplicationDataSet":
         self.__sample_factory = AttributeComparison(
             self.__true_matches,
             config,
@@ -57,7 +57,7 @@ class DuplicationDataSet:
 
     def pattern_encoded(
         self, config: EntityReferenceComparisonConfig, possible_outcomes: int = 2
-    ) -> "DuplicationDataSet":
+    ) -> "DeduplicationDataSet":
         self.__sample_factory = PatternEncodedComparison(
             self.__true_matches,
             config,
@@ -68,7 +68,7 @@ class DuplicationDataSet:
         )
         return self
 
-    def cross_sources(self) -> "DuplicationDataSet":
+    def cross_sources(self) -> "DeduplicationDataSet":
         if self.__sample_factory is None:
             raise ValueError("specify type of sampling")
         source = list(self.__extract())
