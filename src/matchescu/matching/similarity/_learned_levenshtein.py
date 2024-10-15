@@ -159,7 +159,7 @@ class LevenshteinLearner(StringSimilarity):
             self._deltas[row, col] = self._gamma[row, col] / n
         self._delta_sharp = self._gamma_sharp / n
 
-    def fit(self, corpus: list[tuple[str, str]], epochs: int = 10):
+    def fit(self, corpus: list[tuple[str, str]], epochs: int = 10) -> "LevenshteinLearner":
         self._init_alphabets(corpus)
         self._init_probabilities()
         epoch = 0
@@ -169,11 +169,12 @@ class LevenshteinLearner(StringSimilarity):
             for x, y in corpus:
                 self._compute_expectations(x, y)
             self._maximize_expectations()
-            if abs(self._delta_sharp - prev_likelihood) < 0.0001:
+            if abs(self._delta_sharp - prev_likelihood) < 0.1:
                 print("converged after", epoch, "epochs")
                 break
             prev_likelihood = self._delta_sharp
             epoch += 1
+        return self
 
     def compute_distance(self, x: str, y: str) -> float:
         alpha = self.forward_eval(x, y)
