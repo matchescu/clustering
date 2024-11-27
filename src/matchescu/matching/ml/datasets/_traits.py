@@ -18,15 +18,10 @@ def _process_float(value: Any) -> float:
 
 
 def _process_currency(value: Any) -> float | None:
-    lc_all = locale.getlocale(locale.LC_ALL)
-    try:
-        if value is None:
-            return None
-        str_val = str(value).strip()
-        locale.setlocale(locale.LC_ALL, "")
-        return locale.atof(str_val.lstrip("$"))
-    finally:
-        locale.setlocale(locale.LC_ALL, lc_all)
+    if value is None:
+        return None
+    str_val = str(value).replace(",", "").strip()
+    return locale.atof(str_val.lstrip("$"))
 
 
 class RecordExtractionTrait:
