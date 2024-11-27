@@ -12,7 +12,7 @@ def _load_data(filename: str, headers: bool) -> pandas.DataFrame:
         return pandas.read_csv(csv_file, header=1 if headers else 0)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_dir():
     return TEST_DIR / "data"
 
