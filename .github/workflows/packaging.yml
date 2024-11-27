@@ -1,5 +1,6 @@
 name: Python Package Workflow
-
+env:
+  PYTHON_VERSION: 3.12.7
 on:
   push:
     tags:
@@ -17,7 +18,7 @@ jobs:
     name: Pre-Merge Check (Build & Test)
     runs-on: ubuntu-latest
     container:
-      image: andreiolar1/python-poetry-mkdocs:latest
+      image: andreiolar1/python-poetry-mkdocs:${{ env.PYTHON_VERSION }}
     if: startsWith(github.head_ref, 'feature/')
     steps:
       - name: Checkout code
@@ -33,7 +34,7 @@ jobs:
     name: Publish Package
     runs-on: ubuntu-latest
     container:
-      image: andreiolar1/python-poetry-mkdocs:latest
+      image: andreiolar1/python-poetry-mkdocs:${{ env.PYTHON_VERSION }}
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout code
