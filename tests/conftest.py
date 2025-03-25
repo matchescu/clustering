@@ -1,37 +1,31 @@
-import pandas
+from pathlib import Path
+from typing import Hashable, Callable
+
 import pytest
 
-from pathlib import Path
-
-
-TEST_DIR = Path(__file__).parent
-
-
-def _load_data(filename: str, headers: bool) -> pandas.DataFrame:
-    with open(TEST_DIR / "data" / filename, "r") as csv_file:
-        return pandas.read_csv(csv_file, header=1 if headers else 0)
+from matchescu.typing import EntityReferenceIdentifier
 
 
 @pytest.fixture(scope="session")
-def data_dir():
-    return TEST_DIR / "data"
+def test_dir():
+    return Path(__file__).parent
+
+
+@pytest.fixture(scope="session")
+def data_dir(test_dir):
+    return test_dir / "data"
+
+
+@pytest.fixture(scope="session")
+def ref_id() -> Callable[[Hashable, str], EntityReferenceIdentifier]:
+    return lambda lbl, src: EntityReferenceIdentifier(lbl, src)
 
 
 @pytest.fixture
-def subsample_a():
-    return _load_data("subsample_a.csv", False)
-
-
-@pytest.fixture
-def subsample_b():
-    return _load_data("subsample_b.csv", False)
-
-
-@pytest.fixture
-def sub_table_a():
-    return _load_data("subtable_a.csv", True)
-
-
-@pytest.fixture
-def sub_table_b():
-    return _load_data("subtable_b.csv", True)
+def entity_reference_id_set(ref_id) -> list[EntityReferenceIdentifier]:
+    return [
+        ref_id("a", "test"),
+        ref_id("b", "test"),
+        ref_id("c", "test"),
+        ref_id("d", "test"),
+    ]

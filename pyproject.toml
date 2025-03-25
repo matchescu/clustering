@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "matchescu-matching"
+name = "matchescu-clustering"
 version = "0.1.0"
 description = ""
 authors = ["Andrei Olar <andrei.olar@ubbcluj.ro>"]
@@ -7,21 +7,16 @@ readme = "README.md"
 packages = [{include = "matchescu", from="src"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
-certifi = "^2023.7.22"
-pandas = "^2.2.3"
-ppjoin = {git = "https://github.com/usc-isi-i2/ppjoin.git", rev = "0.2.0"}
-numpy = "^2.1.1"
-matchescu-base = "^0.7.0"
-
+python = "^3.12"
+matchescu-base = "^0.16.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.3"
-black = {version = "^24.8.0", extras = ["jupyter"]}
-
+pytest = "^8.3.5"
+black = "^25.1.0"
+mypy = "^1.15.0"
+ruff = "^0.11.2"
 
 [tool.poetry.group.development.dependencies]
-jupyterlab = "^4.2.5"
 
 [build-system]
 requires = ["poetry-core"]
