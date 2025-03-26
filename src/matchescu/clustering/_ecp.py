@@ -34,10 +34,13 @@ class EquivalenceClassPartitioner(Generic[T]):
             self._parent[y_root] = x_root
             self._rank[x_root] += 1
 
-    def __call__(self, pairs: list[tuple[T, T]]) -> list[list[T]]:
+    def __call__(self, pairs: list[tuple[T, T]]) -> frozenset[frozenset[T]]:
         for x, y in pairs:
             self._union(x, y)
         classes = {item: dict() for item in self._items}
         for item in self._items:
             classes[self._find(item)][item] = None
-        return [list(eq_class) for eq_class in classes.values() if len(eq_class) > 0]
+        return frozenset(
+            frozenset(eq_class) for eq_class in classes.values()
+            if len(eq_class) > 0
+        )
