@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "matchescu-clustering"
-version = "0.2.0"
+version = "0.2.1"
 description = "Clustering routines and data structures for entity resolution"
 authors = ["Andrei Olar <andrei.olar@ubbcluj.ro>"]
 readme = "README.md"
