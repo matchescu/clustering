@@ -1,4 +1,3 @@
-import networkx as nx
 import numpy as np
 from typing import Generic, TypeVar
 
@@ -36,13 +35,15 @@ class MarkovClustering(Generic[T]):
 
     @staticmethod
     def _inflate(matrix: np.ndarray) -> np.ndarray:
-        matrix = matrix ** 2
+        matrix = matrix**2
         return matrix / matrix.sum(axis=0)
 
     def _has_converged(self, matrix: np.ndarray, previous_matrix: np.ndarray) -> bool:
         return np.allclose(matrix, previous_matrix, atol=self._convergence_threshold)
 
-    def _extract_clusters(self, matrix: np.ndarray, index_to_item: dict[int, T]) -> frozenset[frozenset[T]]:
+    def _extract_clusters(
+        self, matrix: np.ndarray, index_to_item: dict[int, T]
+    ) -> frozenset[frozenset[T]]:
         clusters = []
         for i in range(matrix.shape[0]):
             if matrix[i, i] != 0:
@@ -61,12 +62,13 @@ class MarkovClustering(Generic[T]):
             result_clusters.append(frozenset([singleton]))
         return frozenset(result_clusters)
 
-
-    def _create_transition_matrix(self, matches: list[tuple[T, T]], item_to_index: dict[T, int]) -> np.ndarray:
+    def _create_transition_matrix(
+        self, matches: list[tuple[T, T]], item_to_index: dict[T, int]
+    ) -> np.ndarray:
         n = len(self._items)
         adj_matrix = np.zeros((n, n))
 
-        g = nx.DiGraph(matches)
+        # g = nx.DiGraph(matches)
 
         for left, right in matches:
             left_idx, right_idx = item_to_index[left], item_to_index[right]
@@ -78,14 +80,17 @@ class MarkovClustering(Generic[T]):
     def __call__(self, matches: list[tuple[T, T]]) -> frozenset[frozenset[T]]:
         filtered_matches = list(
             filter(lambda pair: self._simg.weight(*pair) >= self._threshold, matches)
-            if self._simg is not None else matches
+            if self._simg is not None
+            else matches
         )
         # create two order preserving indexes so we can use numpy
         item_to_index = {item: idx for idx, item in enumerate(self._items)}
         index_to_item = {idx: item for item, idx in item_to_index.items()}
 
         # transfer matrix
-        transition_matrix = self._create_transition_matrix(filtered_matches, item_to_index)
+        transition_matrix = self._create_transition_matrix(
+            filtered_matches, item_to_index
+        )
         flow_matrix = self._inflate(transition_matrix @ transition_matrix)
 
         # Markov clustering

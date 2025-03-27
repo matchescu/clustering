@@ -35,8 +35,5 @@ class ConnectedComponents(Generic[T]):
                 continue
             g.add_edge(u, v)
         clusters = nx.connected_components(g)
-        result = frozenset(
-            frozenset(node for node in cluster)
-            for cluster in clusters
-        )
+        result = frozenset(frozenset(node for node in cluster) for cluster in clusters)
         return result
