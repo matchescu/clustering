@@ -1,14 +1,16 @@
 from typing import TypeVar, Hashable, Generic
 
+from matchescu.reference_store.comparison_space import BinaryComparisonSpace
+
 
 T = TypeVar("T", bound=Hashable)
 
 
 class EquivalenceClassPartitioner(Generic[T]):
-    def __init__(self, items: list[T]):
-        self._rank = {item: 0 for item in items}
-        self._parent = {item: item for item in items}
-        self._items = items
+    def __init__(self, comparison_space: BinaryComparisonSpace):
+        self._items = list(set(ref_id for pair in comparison_space for ref_id in pair))
+        self._rank = {item: 0 for item in self._items}
+        self._parent = {item: item for item in self._items}
 
     def _find(self, x: T) -> T:
         if self._parent[x] == x:
@@ -34,8 +36,8 @@ class EquivalenceClassPartitioner(Generic[T]):
             self._parent[y_root] = x_root
             self._rank[x_root] += 1
 
-    def __call__(self, pairs: list[tuple[T, T]]) -> frozenset[frozenset[T]]:
-        for x, y in pairs:
+    def __call__(self, matches: list[tuple[T, T]]) -> frozenset[frozenset[T]]:
+        for x, y in matches:
             self._union(x, y)
         classes = {item: dict() for item in self._items}
         for item in self._items:
