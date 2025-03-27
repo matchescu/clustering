@@ -34,51 +34,50 @@ class MarkovClustering(Generic[T]):
         np.fill_diagonal(matrix, self._loop_value)
         return matrix
 
-    def _normalize(self, matrix: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _inflate(matrix: np.ndarray) -> np.ndarray:
+        matrix = matrix ** 2
         return matrix / matrix.sum(axis=0)
-
-    def _expand(self, matrix: np.ndarray) -> np.ndarray:
-        return np.linalg.matrix_power(matrix, self._expansion_power)
-
-    def _inflate(self, matrix: np.ndarray) -> np.ndarray:
-        return np.power(matrix, self._inflation_power)
 
     def _has_converged(self, matrix: np.ndarray, previous_matrix: np.ndarray) -> bool:
         return np.allclose(matrix, previous_matrix, atol=self._convergence_threshold)
 
     def _extract_clusters(self, matrix: np.ndarray, index_to_item: dict[int, T]) -> frozenset[frozenset[T]]:
-        clusters = frozenset(
-            frozenset(np.where(matrix[i] > 0)[0])
-            for i in range(matrix.shape[0])
-            if matrix[i, i] != 0
-        )
-        result_clusters = set(
-            frozenset(index_to_item[idx] for idx in cluster)
-            for cluster in clusters
-        )
-        clustered_items = set(
-            item for cluster in clusters for item in cluster
-        )
+        clusters = []
+        for i in range(matrix.shape[0]):
+            if matrix[i, i] != 0:
+                cluster = set(np.where(matrix[i] > 0)[0])
+                if cluster not in clusters:
+                    clusters.append(cluster)
+        clustered_items = set()
+        result_clusters = []
+        for cluster in clusters:
+            cluster_items = frozenset(index_to_item[idx] for idx in cluster)
+            result_clusters.append(cluster_items)
+            clustered_items.update(cluster_items)
+        # Add singletons
         singletons = self._items - clustered_items
         for singleton in singletons:
-            result_clusters.add(frozenset([singleton]))
+            result_clusters.append(frozenset([singleton]))
         return frozenset(result_clusters)
 
-    def _create_transfer_matrix(self, matches: list[tuple[T, T]], item_to_index: dict[T, int]) -> np.ndarray:
+
+    def _create_transition_matrix(self, matches: list[tuple[T, T]], item_to_index: dict[T, int]) -> np.ndarray:
         n = len(self._items)
-        matrix = np.zeros((n, n))
+        adj_matrix = np.zeros((n, n))
 
         g = nx.DiGraph(matches)
+
         for left, right in matches:
             left_idx, right_idx = item_to_index[left], item_to_index[right]
-            out_degree = g.out_degree(left)
-            matrix[left_idx, right_idx] = 1 / out_degree if out_degree > 0 else 0
+            adj_matrix[left_idx, right_idx] = 1
+        adj_matrix = self._add_self_loops(adj_matrix)
 
-        return matrix
+        return adj_matrix / adj_matrix.sum(axis=0)
 
     def __call__(self, matches: list[tuple[T, T]]) -> frozenset[frozenset[T]]:
-        filtered_matches = (
-            list(filter(lambda pair: self._simg.weight(*pair) >= self._threshold, matches))
+        filtered_matches = list(
+            filter(lambda pair: self._simg.weight(*pair) >= self._threshold, matches)
             if self._simg is not None else matches
         )
         # create two order preserving indexes so we can use numpy
@@ -86,21 +85,16 @@ class MarkovClustering(Generic[T]):
         index_to_item = {idx: item for item, idx in item_to_index.items()}
 
         # transfer matrix
-        transfer_matrix = self._create_transfer_matrix(filtered_matches, item_to_index)
-        flow_matrix = transfer_matrix @ transfer_matrix
+        transition_matrix = self._create_transition_matrix(filtered_matches, item_to_index)
+        flow_matrix = self._inflate(transition_matrix @ transition_matrix)
 
         # Markov clustering
-        matrix = self._add_self_loops(flow_matrix)
-        matrix = self._normalize(matrix)
-
         for _ in range(self._max_iterations):
-            previous_matrix = matrix.copy()
-            matrix = self._expand(matrix)
-            matrix = self._inflate(matrix)
-            matrix = self._normalize(matrix)
+            previous_matrix = flow_matrix.copy()
+            flow_matrix = self._inflate(flow_matrix @ flow_matrix)
 
-            if self._has_converged(matrix, previous_matrix):
+            if self._has_converged(flow_matrix, previous_matrix):
                 break
 
         # convert to frozenset
-        return self._extract_clusters(matrix, index_to_item)
+        return self._extract_clusters(flow_matrix, index_to_item)
