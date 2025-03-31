@@ -1,14 +1,14 @@
 from typing import TypeVar, Hashable, Generic
 
 from matchescu.reference_store.comparison_space import BinaryComparisonSpace
-
+from matchescu.similarity import SimilarityGraph
 
 T = TypeVar("T", bound=Hashable)
 
 
 class EquivalenceClassPartitioner(Generic[T]):
-    def __init__(self, comparison_space: BinaryComparisonSpace):
-        self._items = list(set(ref_id for pair in comparison_space for ref_id in pair))
+    def __init__(self, all_comparisons: BinaryComparisonSpace) -> None:
+        self._items = list(set(item for pair in all_comparisons for item in pair))
         self._rank = {item: 0 for item in self._items}
         self._parent = {item: item for item in self._items}
 
@@ -36,8 +36,8 @@ class EquivalenceClassPartitioner(Generic[T]):
             self._parent[y_root] = x_root
             self._rank[x_root] += 1
 
-    def __call__(self, matches: list[tuple[T, T]]) -> frozenset[frozenset[T]]:
-        for x, y in matches:
+    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
+        for x, y in similarity_graph.matches():
             self._union(x, y)
         classes = {item: dict() for item in self._items}
         for item in self._items:
