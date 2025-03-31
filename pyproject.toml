@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "matchescu-clustering"
-version = "0.2.3"
+version = "0.3.0"
 description = "Clustering routines and data structures for entity resolution"
 authors = ["Andrei Olar <andrei.olar@ubbcluj.ro>"]
 readme = "README.md"
@@ -8,7 +8,8 @@ packages = [{include = "matchescu", from="src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-matchescu-base = "^0.17.1"
+matchescu-base = "^0.18.0"
+matchescu-reference-store = "^0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
