@@ -12,7 +12,6 @@ class MarkovClustering(Generic[T]):
     def __init__(
         self,
         comparison_space: BinaryComparisonSpace,
-        similarity_graph: SimilarityGraph | None = None,
         expansion_power: int = 2,
         inflation_power: int = 2,
         loop_value: int = 1,
@@ -21,7 +20,6 @@ class MarkovClustering(Generic[T]):
         min_edge_weight: float = 0.5,
     ):
         self._items = set(ref_id for pair in comparison_space for ref_id in pair)
-        self._simg = similarity_graph
         self._expansion_power = expansion_power
         self._inflation_power = inflation_power
         self._loop_value = loop_value
@@ -68,8 +66,6 @@ class MarkovClustering(Generic[T]):
         n = len(self._items)
         adj_matrix = np.zeros((n, n))
 
-        # g = nx.DiGraph(matches)
-
         for left, right in matches:
             left_idx, right_idx = item_to_index[left], item_to_index[right]
             adj_matrix[left_idx, right_idx] = 1
@@ -77,17 +73,16 @@ class MarkovClustering(Generic[T]):
 
         return adj_matrix / adj_matrix.sum(axis=0)
 
-    def __call__(self, matches: list[tuple[T, T]]) -> frozenset[frozenset[T]]:
-        filtered_matches = list(
-            filter(lambda pair: self._simg.weight(*pair) >= self._threshold, matches)
-            if self._simg is not None
-            else matches
-        )
+    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
+        filtered_matches = [
+            edge for edge in similarity_graph.matches()
+            if similarity_graph.weight(*edge) >= self._threshold
+        ]
         # create two order preserving indexes so we can use numpy
         item_to_index = {item: idx for idx, item in enumerate(self._items)}
         index_to_item = {idx: item for item, idx in item_to_index.items()}
 
-        # transfer matrix
+        # transition matrix
         transition_matrix = self._create_transition_matrix(
             filtered_matches, item_to_index
         )
