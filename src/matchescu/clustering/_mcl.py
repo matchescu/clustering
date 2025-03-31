@@ -75,7 +75,8 @@ class MarkovClustering(Generic[T]):
 
     def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
         filtered_matches = [
-            edge for edge in similarity_graph.matches()
+            edge
+            for edge in similarity_graph.matches()
             if similarity_graph.weight(*edge) >= self._threshold
         ]
         # create two order preserving indexes so we can use numpy
