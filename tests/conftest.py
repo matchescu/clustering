@@ -1,4 +1,5 @@
 import itertools
+from functools import reduce
 from pathlib import Path
 from typing import Hashable, Callable
 from unittest.mock import MagicMock
@@ -36,6 +37,7 @@ def ref(ref_id):
         mock = MagicMock(name=f"{lbl}-reference", spec=EntityReference)
         mock.id = ref_id(lbl, src)
         return mock
+
     return _
 
 
@@ -50,9 +52,12 @@ def entity_reference_id_set(ref_id, source) -> list[EntityReferenceIdentifier]:
 
 
 @pytest.fixture
-def comparison_space(entity_reference_id_set):
+def comparison_space(entity_reference_id_set, request, ref_id, source):
     result = MagicMock(spec=BinaryComparisonSpace)
-    result.__iter__.return_value = list(itertools.combinations(entity_reference_id_set, 2))
+    cmp_space = list(itertools.combinations(entity_reference_id_set, 2))
+    if hasattr(request, "param") and isinstance(request.param, list):
+        cmp_space = [(ref_id(x, source), ref_id(y, source)) for x, y in request.param]
+    result.__iter__.return_value = cmp_space
     return result
 
 
@@ -74,9 +79,19 @@ def matcher_mock(request):
 
 
 @pytest.fixture
-def similarity_graph(ref, matcher_mock, max_non_match_threshold, min_match_threshold, source):
-    sim_graph = SimilarityGraph(matcher_mock, max_non_match_threshold, min_match_threshold)
-    sim_graph.add(ref("a", source), ref("b", source))
-    sim_graph.add(ref("b", source), ref("c", source))
-    sim_graph.add(ref("c", source), ref("d", source))
+def similarity_graph(
+    ref, matcher_mock, max_non_match_threshold, min_match_threshold, source, request
+):
+    edge_spec = [
+        (ref("a", source), ref("b", source)),
+        (ref("b", source), ref("c", source)),
+        (ref("c", source), ref("d", source)),
+    ]
+    if hasattr(request, "param") and isinstance(request.param, (list, set, tuple)):
+        edge_spec = list((ref(x, source), ref(y, source)) for x, y in request.param)
+    sim_graph = reduce(
+        lambda g, pair: g.add(*pair),
+        edge_spec,
+        SimilarityGraph(matcher_mock, max_non_match_threshold, min_match_threshold),
+    )
     return sim_graph

@@ -43,6 +43,5 @@ class EquivalenceClassPartitioner(Generic[T]):
         for item in self._items:
             classes[self._find(item)][item] = None
         return frozenset(
-            frozenset(eq_class) for eq_class in classes.values()
-            if len(eq_class) > 0
+            frozenset(eq_class) for eq_class in classes.values() if len(eq_class) > 0
         )
