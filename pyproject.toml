@@ -9,6 +9,7 @@ packages = [{include = "matchescu", from="src"}]
 [tool.poetry.dependencies]
 python = "^3.12"
 matchescu-base = "^0.18.0"
+matchescu-reference-store = "^0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"

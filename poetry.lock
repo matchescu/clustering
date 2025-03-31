@@ -101,6 +101,21 @@ files = [
 networkx = ">=3.4.2,<4.0.0"
 
 [[package]]
+name = "matchescu-reference-store"
+version = "0.7.2"
+description = "Entity reference storage data types and APIs"
+optional = false
+python-versions = "<4.0,>=3.12"
+groups = ["main"]
+files = [
+    {file = "matchescu_reference_store-0.7.2-py3-none-any.whl", hash = "sha256:e881f4f9169de510b92787f3b08c72037fd38b06f10d6d2321b39b1f4e340ab7"},
+    {file = "matchescu_reference_store-0.7.2.tar.gz", hash = "sha256:5e5acc28ba8ea53eab6d8b59929470ed2dad3f150dc66da92b79b2a692b805af"},
+]
+
+[package.dependencies]
+matchescu-base = ">=0.18.0,<0.19.0"
+
+[[package]]
 name = "mypy"
 version = "1.15.0"
 description = "Optional static typing for Python"
@@ -306,4 +321,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "d8fa8138af1017f962f8587e6120d1a7f46e9c41ccfc970b4afd5ca78c420faf"
+content-hash = "ea96a2eb9432573fe4a24b78c2c107c1a594c32a00a0383fc78642be3860e823"
