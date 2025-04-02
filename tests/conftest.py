@@ -1,5 +1,5 @@
 import itertools
-from functools import reduce
+from functools import reduce, partial
 from pathlib import Path
 from typing import Hashable, Callable
 from unittest.mock import MagicMock
@@ -55,8 +55,11 @@ def entity_reference_id_set(ref_id, source) -> list[EntityReferenceIdentifier]:
 def comparison_space(entity_reference_id_set, request, ref_id, source):
     result = MagicMock(spec=BinaryComparisonSpace)
     cmp_space = list(itertools.combinations(entity_reference_id_set, 2))
-    if hasattr(request, "param") and isinstance(request.param, list):
-        cmp_space = [(ref_id(x, source), ref_id(y, source)) for x, y in request.param]
+    if hasattr(request, "param"):
+        if isinstance(request.param, (list, dict)):
+            cmp_space = [
+                (ref_id(x, source), ref_id(y, source)) for x, y in request.param
+            ]
     result.__iter__.return_value = cmp_space
     return result
 
@@ -71,11 +74,29 @@ def min_match_threshold(request):
     return request.param if hasattr(request, "param") else 0.75
 
 
+def default_scoring_algorithm(_, __):
+    return 1.0
+
+
 @pytest.fixture
 def matcher_mock(request):
-    result = MagicMock(name="mock matcher object", spec=Matcher)
-    result.return_value = request.param if hasattr(request, "param") else 1.0
-    return result
+    scoring_algo = default_scoring_algorithm
+
+    if hasattr(request, "param"):
+        if isinstance(request.param, (int, float)):
+
+            def _return_param(_, __):
+                return request.param
+
+            scoring_algo = _return_param
+        elif isinstance(request.param, dict):
+
+            def _match_score(x, y, score_dict):
+                return score_dict.get((x.id.label, y.id.label), 0.0)
+
+            scoring_algo = partial(_match_score, score_dict=request.param)
+
+    return MagicMock(name="mock matcher object", spec=Matcher, side_effect=scoring_algo)
 
 
 @pytest.fixture
