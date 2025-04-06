@@ -1,14 +1,13 @@
-from typing import TypeVar, Hashable, Generic
+from collections.abc import Iterable
 
-from matchescu.reference_store.comparison_space import BinaryComparisonSpace
 from matchescu.similarity import SimilarityGraph
 
-T = TypeVar("T", bound=Hashable)
+from matchescu.clustering._base import T, ClusteringAlgorithm
 
 
-class EquivalenceClassPartitioner(Generic[T]):
-    def __init__(self, all_comparisons: BinaryComparisonSpace) -> None:
-        self._items = list(set(item for pair in all_comparisons for item in pair))
+class EquivalenceClassPartitioner(ClusteringAlgorithm[T]):
+    def __init__(self, all_refs: Iterable[T]) -> None:
+        super().__init__(all_refs, 0.0)
         self._rank = {item: 0 for item in self._items}
         self._parent = {item: item for item in self._items}
 

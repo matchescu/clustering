@@ -1,16 +1,16 @@
+from collections.abc import Iterable
+
 import networkx as nx
 
-from matchescu.reference_store.comparison_space import BinaryComparisonSpace
 from matchescu.similarity import SimilarityGraph
 from matchescu.typing import EntityReferenceIdentifier
 
+from matchescu.clustering._base import T, ClusteringAlgorithm
 
-class WeaklyConnectedComponents:
-    def __init__(
-        self, all_comparisons: BinaryComparisonSpace, threshold: float | None
-    ) -> None:
-        self._threshold = threshold
-        self._items = list(set(item for pair in all_comparisons for item in pair))
+
+class WeaklyConnectedComponents(ClusteringAlgorithm[T]):
+    def __init__(self, all_refs: Iterable[T], threshold: float | None) -> None:
+        super().__init__(all_refs, threshold)
 
     def __call__(
         self, similarity_graph: SimilarityGraph

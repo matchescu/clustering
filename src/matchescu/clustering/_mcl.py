@@ -1,29 +1,27 @@
+from collections.abc import Iterable
+
 import markov_clustering as mc
 import networkx as nx
-from typing import Generic, TypeVar
 
-from matchescu.reference_store.comparison_space import BinaryComparisonSpace
 from matchescu.similarity import SimilarityGraph
 
+from matchescu.clustering._base import T, ClusteringAlgorithm
 
-T = TypeVar("T")
 
-
-class MarkovClustering(Generic[T]):
+class MarkovClustering(ClusteringAlgorithm[T]):
     def __init__(
         self,
-        comparison_space: BinaryComparisonSpace,
+        all_refs: Iterable[T],
         threshold: float = 0.0,
         inflation_power: float = 2.0,
         expansion_power: int = 2,
         prune_threshold: float = 0.001,
     ):
-        self._items = list(set(x for pair in comparison_space for x in pair))
+        super().__init__(all_refs, threshold)
         self._item_to_index = {item: idx for idx, item in enumerate(self._items)}
         self._expansion_power = expansion_power
         self._inflation_power = inflation_power
         self._prune_threshold = prune_threshold
-        self._threshold = threshold
 
     def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
         g = nx.DiGraph()

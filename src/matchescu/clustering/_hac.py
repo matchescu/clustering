@@ -1,26 +1,24 @@
 import itertools
-from typing import TypeVar, Generic
+from typing import Iterable
 
 import networkx as nx
 import numpy as np
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import pdist
 
-from matchescu.reference_store.comparison_space import BinaryComparisonSpace
 from matchescu.similarity import SimilarityGraph
-from matchescu.typing import EntityReferenceIdentifier
 
-T = TypeVar("T", bound=EntityReferenceIdentifier)
+from matchescu.clustering._base import ClusteringAlgorithm, T
 
 
-class HierarchicalAgglomerativeClustering(Generic[T]):
+class HierarchicalAgglomerativeClustering(ClusteringAlgorithm[T]):
     def __init__(
         self,
-        all_comparisons: BinaryComparisonSpace,
+        all_refs: Iterable[T],
         distance_function: str = "cosine",
-        max_cluster_distance: float = 0.0,
+        max_cluster_distance: float = 1.0,
     ) -> None:
-        self._items = list(set(item for pair in all_comparisons for item in pair))
+        super().__init__(all_refs, 0.0)
         self._fcluster_threshold = max_cluster_distance
         self._distance_function = distance_function
         self._linkage_method = "ward"

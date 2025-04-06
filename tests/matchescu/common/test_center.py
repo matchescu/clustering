@@ -25,18 +25,20 @@ TEST_EDGES = {
 
 
 @pytest.mark.parametrize(
-    "comparison_space,matcher_mock,similarity_graph,min_match_threshold",
-    [(TEST_EDGES, TEST_EDGES, list(TEST_EDGES.keys()), min(TEST_EDGES.values()))],
+    "matcher_mock,similarity_graph,all_refs,min_match_threshold",
+    [(TEST_EDGES, list(TEST_EDGES.keys()), TEST_EDGES, min(TEST_EDGES.values()))],
     indirect=True,
 )
 def test_basic_scenario(
-    comparison_space, matcher_mock, similarity_graph, min_match_threshold
+    matcher_mock,
+    similarity_graph,
+    min_match_threshold,
+    all_refs,
 ):
-    make_clusters = ParentCenterClustering(comparison_space, 0.0)
+    make_clusters = ParentCenterClustering(all_refs, 0.0)
 
     clusters = make_clusters(similarity_graph)
 
     assert len(clusters) == 4
-    n_items = len(set(item for pair in comparison_space for item in pair))
     n_clustered_items = len(set(elem for cluster in clusters for elem in cluster))
-    assert n_items == n_clustered_items
+    assert len(all_refs) == n_clustered_items

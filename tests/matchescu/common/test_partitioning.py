@@ -4,25 +4,25 @@ from matchescu.clustering._ecp import EquivalenceClassPartitioner
 
 
 @pytest.fixture
-def compute_partition(comparison_space):
-    return EquivalenceClassPartitioner(comparison_space)
+def compute_partition(all_refs):
+    return EquivalenceClassPartitioner(all_refs)
 
 
 @pytest.mark.parametrize(
-    "comparison_space,similarity_graph", [([("a", "a")], [("a", "a")])], indirect=True
+    "all_refs,similarity_graph", [({"a"}, [("a", "a")])], indirect=True
 )
-def test_reflexivity(compute_partition, comparison_space, similarity_graph, ref_id):
+def test_reflexivity(compute_partition, all_refs, similarity_graph, ref_id):
     partition = compute_partition(similarity_graph)
     assert len(partition) == 1
     assert partition == frozenset({frozenset({ref_id("a", "test")})})
 
 
 @pytest.mark.parametrize(
-    "comparison_space,similarity_graph",
-    [([("a", "b")], [("a", "b"), ("b", "a")])],
+    "all_refs,similarity_graph",
+    [({"a", "b"}, [("a", "b"), ("b", "a")])],
     indirect=True,
 )
-def test_symmetry(compute_partition, similarity_graph, comparison_space, ref_id):
+def test_symmetry(compute_partition, similarity_graph, all_refs, ref_id):
     partition = compute_partition(similarity_graph)
     assert len(partition) == 1
     assert partition == frozenset(
@@ -31,11 +31,11 @@ def test_symmetry(compute_partition, similarity_graph, comparison_space, ref_id)
 
 
 @pytest.mark.parametrize(
-    "comparison_space,similarity_graph",
-    [([("a", "b"), ("b", "c")], [("a", "b"), ("b", "c")])],
+    "all_refs,similarity_graph",
+    [({"a", "b", "c"}, [("a", "b"), ("b", "c")])],
     indirect=True,
 )
-def test_transitivity(compute_partition, similarity_graph, comparison_space, ref_id):
+def test_transitivity(compute_partition, similarity_graph, all_refs, ref_id):
     partition = compute_partition(similarity_graph)
 
     assert len(partition) == 1
@@ -45,13 +45,11 @@ def test_transitivity(compute_partition, similarity_graph, comparison_space, ref
 
 
 @pytest.mark.parametrize(
-    "comparison_space,similarity_graph",
-    [([("a", "b"), ("b", "c"), ("c", "d")], [("a", "b"), ("b", "c"), ("d", "a")])],
+    "all_refs,similarity_graph",
+    [({"a", "b", "c", "d"}, [("a", "b"), ("b", "c"), ("d", "a")])],
     indirect=True,
 )
-def test_create_single_set(
-    compute_partition, similarity_graph, comparison_space, ref_id
-):
+def test_create_single_set(compute_partition, similarity_graph, all_refs, ref_id):
     partition = compute_partition(similarity_graph)
 
     assert len(partition) == 1
@@ -70,11 +68,11 @@ def test_create_single_set(
 
 
 @pytest.mark.parametrize(
-    "comparison_space,similarity_graph",
-    [([("a", "b"), ("b", "c"), ("c", "d")], [("a", "b"), ("b", "c")])],
+    "all_refs,similarity_graph",
+    [({"a", "b", "c", "d"}, [("a", "b"), ("b", "c")])],
     indirect=True,
 )
-def test_isolated_item(compute_partition, similarity_graph, comparison_space, ref_id):
+def test_isolated_item(compute_partition, similarity_graph, all_refs, ref_id):
     partition = compute_partition(similarity_graph)
 
     assert len(partition) == 2
