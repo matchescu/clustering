@@ -1,24 +1,21 @@
-from typing import Generic, TypeVar
 import random
+from collections.abc import Iterable
 
-from matchescu.reference_store.comparison_space import BinaryComparisonSpace
 from matchescu.similarity import SimilarityGraph
-from matchescu.typing import EntityReferenceIdentifier
 
-T = TypeVar("T", bound=EntityReferenceIdentifier)
+from matchescu.clustering._base import T, ClusteringAlgorithm
 
 
-class WeightedCorrelationClustering(Generic[T]):
+class WeightedCorrelationClustering(ClusteringAlgorithm[T]):
     def __init__(
         self,
-        all_comparisons: BinaryComparisonSpace,
+        all_refs: Iterable[T],
         threshold: float = 0.0,
         random_seed: int | None = None,
     ) -> None:
-        self._items = set(item for pair in all_comparisons for item in pair)
+        super().__init__(all_refs, threshold)
         if random_seed:
             random.seed(random_seed)
-        self._threshold = threshold
 
     def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
         unclustered_nodes = set(self._items)

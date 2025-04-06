@@ -1,4 +1,3 @@
-import itertools
 from functools import reduce, partial
 from pathlib import Path
 from typing import Hashable, Callable
@@ -6,7 +5,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from matchescu.reference_store.comparison_space import BinaryComparisonSpace
 from matchescu.similarity import SimilarityGraph, Matcher
 from matchescu.typing import EntityReferenceIdentifier, EntityReference
 
@@ -39,29 +37,6 @@ def ref(ref_id):
         return mock
 
     return _
-
-
-@pytest.fixture
-def entity_reference_id_set(ref_id, source) -> list[EntityReferenceIdentifier]:
-    return [
-        ref_id("a", source),
-        ref_id("b", source),
-        ref_id("c", source),
-        ref_id("d", source),
-    ]
-
-
-@pytest.fixture
-def comparison_space(entity_reference_id_set, request, ref_id, source):
-    result = MagicMock(spec=BinaryComparisonSpace)
-    cmp_space = list(itertools.combinations(entity_reference_id_set, 2))
-    if hasattr(request, "param"):
-        if isinstance(request.param, (list, dict)):
-            cmp_space = [
-                (ref_id(x, source), ref_id(y, source)) for x, y in request.param
-            ]
-    result.__iter__.return_value = cmp_space
-    return result
 
 
 @pytest.fixture
@@ -116,3 +91,25 @@ def similarity_graph(
         SimilarityGraph(matcher_mock, max_non_match_threshold, min_match_threshold),
     )
     return sim_graph
+
+
+@pytest.fixture
+def all_refs(request, ref_id, source):
+    def _expand_item(item):
+        if isinstance(item, tuple):
+            yield from (ref_id(x, source) for x in item)
+        else:
+            yield ref_id(item, source)
+
+    if hasattr(request, "param"):
+        if isinstance(request.param, (list, set)):
+            return {x for item in request.param for x in _expand_item(item)}
+        if isinstance(request.param, dict):
+            return {x for key in request.param for x in _expand_item(key)}
+
+    return [
+        ref_id("a", source),
+        ref_id("b", source),
+        ref_id("c", source),
+        ref_id("d", source),
+    ]

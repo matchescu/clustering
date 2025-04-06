@@ -4,8 +4,8 @@ from matchescu.clustering._corr import WeightedCorrelationClustering
 
 
 @pytest.fixture
-def corr(comparison_space, min_match_threshold):
-    return WeightedCorrelationClustering(comparison_space, min_match_threshold)
+def corr(all_refs, min_match_threshold):
+    return WeightedCorrelationClustering(all_refs, min_match_threshold)
 
 
 def test_single_cluster_on_default_data(corr, similarity_graph):

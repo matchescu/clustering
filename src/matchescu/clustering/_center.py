@@ -1,21 +1,15 @@
 from collections import defaultdict
-from typing import TypeVar, Generic
+from collections.abc import Iterable
 
 import networkx as nx
-
-from matchescu.reference_store.comparison_space import BinaryComparisonSpace
 from matchescu.similarity import SimilarityGraph
-from matchescu.typing import EntityReferenceIdentifier
 
-T = TypeVar("T", bound=EntityReferenceIdentifier)
+from matchescu.clustering._base import T, ClusteringAlgorithm
 
 
-class ParentCenterClustering(Generic[T]):
-    def __init__(
-        self, all_comparisons: BinaryComparisonSpace, threshold: float = 0.0
-    ) -> None:
-        self._items = list(set(item for pair in all_comparisons for item in pair))
-        self._threshold = threshold
+class ParentCenterClustering(ClusteringAlgorithm[T]):
+    def __init__(self, all_refs: Iterable[T], threshold: float = 0.0) -> None:
+        super().__init__(all_refs, threshold)
 
     @staticmethod
     def _find_root(parents, node):
