@@ -3,7 +3,7 @@ from collections.abc import Iterable
 import markov_clustering as mc
 import networkx as nx
 
-from matchescu.similarity import SimilarityGraph
+from matchescu.similarity import ReferenceGraph
 
 from matchescu.clustering._base import T, ClusteringAlgorithm
 
@@ -12,7 +12,7 @@ class MarkovClustering(ClusteringAlgorithm[T]):
     def __init__(
         self,
         all_refs: Iterable[T],
-        threshold: float = 0.0,
+        threshold: float = 0.75,
         inflation_power: float = 2.0,
         expansion_power: int = 2,
         prune_threshold: float = 0.001,
@@ -23,11 +23,11 @@ class MarkovClustering(ClusteringAlgorithm[T]):
         self._inflation_power = inflation_power
         self._prune_threshold = prune_threshold
 
-    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
+    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         g = nx.DiGraph()
 
-        for u, v in similarity_graph.matches():
-            g.add_edge(u, v, weight=similarity_graph.weight(u, v))
+        for u, v in reference_graph.matches(self._threshold):
+            g.add_edge(u, v, weight=reference_graph.weight(u, v))
 
         linked_ref_ids = list(g.nodes)
         adj_matrix = nx.to_numpy_array(g, weight="weight")

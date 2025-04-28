@@ -1,6 +1,6 @@
 import pytest
 
-from matchescu.clustering._center import ParentCenterClustering
+from matchescu.clustering._cc import ConnectedComponents
 
 TEST_EDGES = {
     ("A", "B"): 0.8,
@@ -25,8 +25,16 @@ TEST_EDGES = {
 
 
 @pytest.mark.parametrize(
-    "matcher_mock,reference_graph,all_refs,min_match_threshold",
-    [(TEST_EDGES, list(TEST_EDGES.keys()), TEST_EDGES, min(TEST_EDGES.values()))],
+    "matcher_mock,reference_graph,directed,all_refs,min_match_threshold",
+    [
+        (
+            TEST_EDGES,
+            list(TEST_EDGES.keys()),
+            False,
+            TEST_EDGES,
+            min(TEST_EDGES.values()),
+        )
+    ],
     indirect=True,
 )
 def test_basic_scenario(
@@ -35,10 +43,10 @@ def test_basic_scenario(
     min_match_threshold,
     all_refs,
 ):
-    make_clusters = ParentCenterClustering(all_refs, 0.0)
+    make_clusters = ConnectedComponents(all_refs, 0.0)
 
     clusters = make_clusters(reference_graph)
 
-    assert len(clusters) == 4
+    assert len(clusters) == 1
     n_clustered_items = len(set(elem for cluster in clusters for elem in cluster))
     assert len(all_refs) == n_clustered_items

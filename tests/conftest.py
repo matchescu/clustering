@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from matchescu.similarity import SimilarityGraph, Matcher
+from matchescu.similarity import ReferenceGraph, Matcher
 from matchescu.typing import EntityReferenceIdentifier, EntityReference
 
 
@@ -49,6 +49,11 @@ def min_match_threshold(request):
     return request.param if hasattr(request, "param") else 0.75
 
 
+@pytest.fixture
+def directed(request):
+    return (not hasattr(request, "param")) or bool(request.param)
+
+
 def default_scoring_algorithm(_, __):
     return 1.0
 
@@ -75,9 +80,7 @@ def matcher_mock(request):
 
 
 @pytest.fixture
-def similarity_graph(
-    ref, matcher_mock, max_non_match_threshold, min_match_threshold, source, request
-):
+def reference_graph(ref, matcher_mock, directed, source, request):
     edge_spec = [
         (ref("a", source), ref("b", source)),
         (ref("b", source), ref("c", source)),
@@ -88,7 +91,7 @@ def similarity_graph(
     sim_graph = reduce(
         lambda g, pair: g.add(*pair),
         edge_spec,
-        SimilarityGraph(matcher_mock, max_non_match_threshold, min_match_threshold),
+        ReferenceGraph(matcher_mock, directed),
     )
     return sim_graph
 

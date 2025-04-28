@@ -1,7 +1,7 @@
 import random
 from collections.abc import Iterable
 
-from matchescu.similarity import SimilarityGraph
+from matchescu.similarity import ReferenceGraph
 
 from matchescu.clustering._base import T, ClusteringAlgorithm
 
@@ -10,14 +10,14 @@ class WeightedCorrelationClustering(ClusteringAlgorithm[T]):
     def __init__(
         self,
         all_refs: Iterable[T],
-        threshold: float = 0.0,
+        threshold: float = 0.75,
         random_seed: int | None = None,
     ) -> None:
         super().__init__(all_refs, threshold)
         if random_seed:
             random.seed(random_seed)
 
-    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
+    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         unclustered_nodes = set(self._items)
         all_clusters = []
 
@@ -31,7 +31,7 @@ class WeightedCorrelationClustering(ClusteringAlgorithm[T]):
                 | set(
                     node
                     for node in nodes_to_check
-                    if similarity_graph.weight(pivot, node) >= self._threshold
+                    if reference_graph.weight(pivot, node) >= self._threshold
                 )
             )
 

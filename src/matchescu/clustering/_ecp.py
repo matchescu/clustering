@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from matchescu.similarity import SimilarityGraph
+from matchescu.similarity import ReferenceGraph
 
 from matchescu.clustering._base import T, ClusteringAlgorithm
 
@@ -35,8 +35,8 @@ class EquivalenceClassPartitioner(ClusteringAlgorithm[T]):
             self._parent[y_root] = x_root
             self._rank[x_root] += 1
 
-    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
-        for x, y in similarity_graph.matches():
+    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
+        for x, y in reference_graph.matches(self._threshold):
             self._union(x, y)
         classes = {item: dict() for item in self._items}
         for item in self._items:
