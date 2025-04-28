@@ -6,7 +6,7 @@ import numpy as np
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import pdist
 
-from matchescu.similarity import SimilarityGraph
+from matchescu.similarity import ReferenceGraph
 
 from matchescu.clustering._base import ClusteringAlgorithm, T
 
@@ -24,13 +24,13 @@ class HierarchicalAgglomerativeClustering(ClusteringAlgorithm[T]):
         self._linkage_method = "ward"
         self._clustering_criterion = "distance"
 
-    def _distance_matrix(self, similarity_graph: SimilarityGraph) -> np.ndarray:
+    def _distance_matrix(self, reference_graph: ReferenceGraph) -> np.ndarray:
         g = nx.DiGraph()
         g.add_nodes_from(self._items)
         g.add_weighted_edges_from(
             itertools.starmap(
                 lambda u, v, data: (u, v, data.get("weight", 0.0)),
-                similarity_graph.edges,
+                reference_graph.edges,
             )
         )
         sim_matrix = nx.to_numpy_array(
@@ -38,8 +38,8 @@ class HierarchicalAgglomerativeClustering(ClusteringAlgorithm[T]):
         ) + np.eye(len(self._items))
         return 1 - ((sim_matrix + sim_matrix.T) / 2)
 
-    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
-        distance_matrix = self._distance_matrix(similarity_graph)
+    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
+        distance_matrix = self._distance_matrix(reference_graph)
 
         # compute hierarchical clusters based on average
         condensed_distance_matrix = pdist(distance_matrix, self._distance_function)

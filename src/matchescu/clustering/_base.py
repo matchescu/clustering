@@ -2,7 +2,7 @@ import abc
 from collections.abc import Iterable
 from typing import TypeVar, Hashable, Generic
 
-from matchescu.similarity import SimilarityGraph
+from matchescu.similarity import ReferenceGraph
 
 T = TypeVar("T", bound=Hashable)
 
@@ -13,5 +13,5 @@ class ClusteringAlgorithm(Generic[T], metaclass=abc.ABCMeta):
         self._threshold = threshold
 
     @abc.abstractmethod
-    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
+    def __call__(self, similarity_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         pass

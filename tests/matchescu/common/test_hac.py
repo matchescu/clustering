@@ -25,16 +25,16 @@ TEST_EDGES = {
 
 
 @pytest.mark.parametrize(
-    "matcher_mock,similarity_graph,all_refs,min_match_threshold",
+    "matcher_mock,reference_graph,all_refs,min_match_threshold",
     [(TEST_EDGES, list(TEST_EDGES.keys()), TEST_EDGES, min(TEST_EDGES.values()))],
     indirect=True,
 )
-def test_basic_scenario(matcher_mock, similarity_graph, all_refs, min_match_threshold):
+def test_basic_scenario(matcher_mock, reference_graph, all_refs, min_match_threshold):
     make_clusters = HierarchicalAgglomerativeClustering(
         all_refs, "cosine", 0.12186934  # cos(83)
     )
 
-    clusters = make_clusters(similarity_graph)
+    clusters = make_clusters(reference_graph)
 
     assert len(clusters) == 3
     n_clustered_items = len(set(elem for cluster in clusters for elem in cluster))

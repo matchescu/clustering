@@ -2,13 +2,13 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 import networkx as nx
-from matchescu.similarity import SimilarityGraph
+from matchescu.similarity import ReferenceGraph
 
 from matchescu.clustering._base import T, ClusteringAlgorithm
 
 
 class ParentCenterClustering(ClusteringAlgorithm[T]):
-    def __init__(self, all_refs: Iterable[T], threshold: float = 0.0) -> None:
+    def __init__(self, all_refs: Iterable[T], threshold: float = 0.75) -> None:
         super().__init__(all_refs, threshold)
 
     @staticmethod
@@ -21,10 +21,10 @@ class ParentCenterClustering(ClusteringAlgorithm[T]):
 
         return ParentCenterClustering._find_root(parents, parents[node])
 
-    def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
+    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         graph = nx.DiGraph()
         graph.add_nodes_from(self._items)
-        graph.add_edges_from(similarity_graph.matches())
+        graph.add_edges_from(reference_graph.matches(self._threshold))
 
         parents = {node: node for node in self._items}
         updated = True
@@ -37,7 +37,7 @@ class ParentCenterClustering(ClusteringAlgorithm[T]):
                 max_similarity = -1
 
                 for predecessor in graph.predecessors(node):
-                    similarity = similarity_graph.weight(predecessor, node)
+                    similarity = reference_graph.weight(predecessor, node)
                     if similarity > max_similarity:
                         max_similarity = similarity
                         best_parent = predecessor
