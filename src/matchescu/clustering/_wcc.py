@@ -16,12 +16,9 @@ class WeaklyConnectedComponents(ClusteringAlgorithm[T]):
         self, similarity_graph: SimilarityGraph
     ) -> frozenset[frozenset[EntityReferenceIdentifier]]:
         g = nx.DiGraph()
-        g.add_nodes_from(similarity_graph.nodes)
-        g.add_edges_from(
-            edge
-            for edge in similarity_graph.matches()
-            if similarity_graph.weight(*edge) >= self._threshold
-        )
+        g.add_nodes_from(self._items)
+        for u, v in similarity_graph.matches():
+            g.add_edge(u, v, weight=similarity_graph.weight(u, v))
         return frozenset(
             frozenset(v for v in comp) for comp in nx.weakly_connected_components(g)
         )

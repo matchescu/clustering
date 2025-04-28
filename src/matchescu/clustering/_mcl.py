@@ -25,14 +25,12 @@ class MarkovClustering(ClusteringAlgorithm[T]):
 
     def __call__(self, similarity_graph: SimilarityGraph) -> frozenset[frozenset[T]]:
         g = nx.DiGraph()
-        g.add_nodes_from(self._items)
-        edges_above_clustering_threshold = [
-            edge
-            for edge in similarity_graph.matches()
-            if similarity_graph.weight(*edge) >= self._threshold
-        ]
-        g.add_edges_from(edges_above_clustering_threshold)
-        adj_matrix = nx.to_numpy_array(g, self._items, weight="weight", nonedge=0)
+
+        for u, v in similarity_graph.matches():
+            g.add_edge(u, v, weight=similarity_graph.weight(u, v))
+
+        linked_ref_ids = list(g.nodes)
+        adj_matrix = nx.to_numpy_array(g, weight="weight")
         adj_matrix[adj_matrix < 0] = 0
 
         result = mc.run_mcl(
@@ -43,10 +41,10 @@ class MarkovClustering(ClusteringAlgorithm[T]):
         )
         cluster_indices = mc.get_clusters(result)
 
-        singletons = set(self._items)
+        singletons = set(self._items) - set(linked_ref_ids)
         clusters = set()
         for c in cluster_indices:
-            cluster = frozenset(self._items[idx] for idx in c)
+            cluster = frozenset(linked_ref_ids[idx] for idx in c)
             singletons.difference_update(cluster)
             clusters.add(cluster)
         for singleton in singletons:
