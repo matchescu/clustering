@@ -119,14 +119,14 @@ drawing = ["matplotlib", "networkx"]
 
 [[package]]
 name = "matchescu-base"
-version = "0.20.0"
+version = "0.21.0"
 description = "Base abstract data types for Entity Resolution"
 optional = false
 python-versions = "<4.0,>=3.11"
 groups = ["main"]
 files = [
-    {file = "matchescu_base-0.20.0-py3-none-any.whl", hash = "sha256:4b9b4b942510a577f09344d59e8f1bf3f4bffc263b417c50c8d552e59ff8c2d8"},
-    {file = "matchescu_base-0.20.0.tar.gz", hash = "sha256:db5f3cfd43d262313cdf619babe28a34f989c56c3620379b24727ec6d102908d"},
+    {file = "matchescu_base-0.21.0-py3-none-any.whl", hash = "sha256:508410e2e5c4ff490674c6327d3f73fb834db192cd5874e52b3fbc929a61f843"},
+    {file = "matchescu_base-0.21.0.tar.gz", hash = "sha256:2240b7459cde8821fd4ff4ad223022ed36a58050fe7738296721e663abf53770"},
 ]
 
 [package.dependencies]
@@ -534,4 +534,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "5405fef56634ea38042cede77ce0d5b2938e349b09b93c750dc0d3328129f263"
+content-hash = "9e538e60410800977d1b0f94809ba23886904a4d728c0b0fb0f55803192abcdd"
