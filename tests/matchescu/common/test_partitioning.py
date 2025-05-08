@@ -1,11 +1,11 @@
 import pytest
 
-from matchescu.clustering._ecp import EquivalenceClassPartitioner
+from matchescu.clustering._ecp import EquivalenceClassClustering
 
 
 @pytest.fixture
 def compute_partition(all_refs):
-    return EquivalenceClassPartitioner(all_refs)
+    return EquivalenceClassClustering(all_refs)
 
 
 @pytest.mark.parametrize(

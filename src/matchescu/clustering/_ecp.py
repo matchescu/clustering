@@ -1,13 +1,14 @@
 from collections.abc import Iterable
+from typing import Generic
 
 from matchescu.similarity import ReferenceGraph
 
 from matchescu.clustering._base import T, ClusteringAlgorithm
 
 
-class EquivalenceClassPartitioner(ClusteringAlgorithm[T]):
+class EquivalenceClassPartitioner(Generic[T]):
     def __init__(self, all_refs: Iterable[T]) -> None:
-        super().__init__(all_refs, 0.0)
+        self._items = list(set(all_refs))
         self._rank = {item: 0 for item in self._items}
         self._parent = {item: item for item in self._items}
 
@@ -35,8 +36,8 @@ class EquivalenceClassPartitioner(ClusteringAlgorithm[T]):
             self._parent[y_root] = x_root
             self._rank[x_root] += 1
 
-    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
-        for x, y in reference_graph.matches(self._threshold):
+    def __call__(self, pairs: Iterable[tuple[T, T]]) -> frozenset[frozenset[T]]:
+        for x, y in pairs:
             self._union(x, y)
         classes = {item: dict() for item in self._items}
         for item in self._items:
@@ -44,3 +45,12 @@ class EquivalenceClassPartitioner(ClusteringAlgorithm[T]):
         return frozenset(
             frozenset(eq_class) for eq_class in classes.values() if len(eq_class) > 0
         )
+
+
+class EquivalenceClassClustering(ClusteringAlgorithm[T]):
+    def __init__(self, all_refs: Iterable[T], threshold: float = 0.75) -> None:
+        super().__init__(all_refs, threshold)
+        self._ecp = EquivalenceClassPartitioner(self._items)
+
+    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
+        return self._ecp(reference_graph.matches(self._threshold))
