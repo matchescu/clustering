@@ -9,6 +9,8 @@ from matchescu.clustering._base import T, ClusteringAlgorithm
 class EquivalenceClassPartitioner(Generic[T]):
     def __init__(self, all_refs: Iterable[T]) -> None:
         self._items = list(set(all_refs))
+
+    def _init_rank_and_path_compression(self):
         self._rank = {item: 0 for item in self._items}
         self._parent = {item: item for item in self._items}
 
@@ -37,6 +39,7 @@ class EquivalenceClassPartitioner(Generic[T]):
             self._rank[x_root] += 1
 
     def __call__(self, pairs: Iterable[tuple[T, T]]) -> frozenset[frozenset[T]]:
+        self._init_rank_and_path_compression()
         for x, y in pairs:
             self._union(x, y)
         classes = {item: dict() for item in self._items}

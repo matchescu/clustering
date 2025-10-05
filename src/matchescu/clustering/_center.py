@@ -13,19 +13,35 @@ class ParentCenterClustering(ClusteringAlgorithm[T]):
 
     @staticmethod
     def _find_root(parents, node):
-        """
-        Finds the root parent of a node in the parent dictionary.
-        """
-        if parents[node] == node:
-            return node
+        path = []
 
-        return ParentCenterClustering._find_root(parents, parents[node])
+        while parents[node] != node:
+            path.append(node)
+            node = parents[node]
 
-    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
+        for n in path:
+            # path compression using the last node in the path
+            parents[n] = node
+
+        return node
+
+    def _construct_dag(self, reference_graph):
         graph = nx.DiGraph()
         graph.add_nodes_from(self._items)
-        graph.add_edges_from(reference_graph.matches(self._threshold))
+        seen_pairs = set()
+        for u, v in reference_graph.matches(self._threshold):
+            if (v, u) in seen_pairs:
+                continue
+            w = max(
+                reference_graph.weight(u, v),
+                reference_graph.weight(v, u),
+            )
+            graph.add_edge(u, v, weight=w)
+            seen_pairs.add((u, v))
+        return graph
 
+    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
+        graph = self._construct_dag(reference_graph)
         parents = {node: node for node in self._items}
         updated = True
 
