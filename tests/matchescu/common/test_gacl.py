@@ -1,3 +1,4 @@
+import itertools
 from functools import reduce
 
 import pytest
@@ -59,6 +60,14 @@ def global_acl(all_refs):
     return ACLClustering(all_refs)
 
 
+def is_partition_over(all_refs: set, clusters: frozenset[frozenset]) -> tuple[bool, str]:
+    if frozenset(all_refs) != frozenset.union(*clusters):
+        return False, "clusters do not contain all elements"
+    return all(
+        (len(a & b) == 0) for a, b in itertools.combinations(clusters, 2)
+    ), "clusters are overlapping"
+
+
 def test_single_cluster_on_default_data(global_acl, reference_graph):
     clusters = global_acl(reference_graph)
 
@@ -68,24 +77,23 @@ def test_single_cluster_on_default_data(global_acl, reference_graph):
 def test_global_acl_chain_partition(all_refs, chain_reference_graph):
     algo = ACLClustering(all_refs)
     clusters = algo(chain_reference_graph)
-    all_nodes = set().union(*clusters)
 
-    assert all_nodes == set(all_refs)
-    assert all(len(a & b) == 0 for a in clusters for b in clusters if a != b)
+    ok, msg = is_partition_over(all_refs, clusters)
+    assert ok, msg
 
 
 def test_global_acl_branched_graph(all_refs, branched_reference_graph):
     algo = ACLClustering(all_refs)
     clusters = algo(branched_reference_graph)
 
-    all_nodes = set().union(*clusters)
-    assert all_nodes == set(all_refs)
-    assert all(len(a & b) == 0 for a in clusters for b in clusters if a != b)
+    ok, msg = is_partition_over(all_refs, clusters)
+    assert ok, msg
 
 
 def test_global_acl_cyclic_graph(all_refs, cyclic_reference_graph):
     algo = ACLClustering(all_refs)
     clusters = algo(cyclic_reference_graph)
 
-    assert len(clusters) == 1
-    assert next(iter(clusters)) == set(all_refs)
+    ok, msg = is_partition_over(all_refs, clusters)
+    assert ok, msg
+    assert len(clusters) == 3

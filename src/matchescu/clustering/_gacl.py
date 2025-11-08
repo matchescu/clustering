@@ -146,34 +146,3 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
         result = frozenset(frozenset(c) for c, _ in self._global_acl(g, self._alpha))
         return result
-
-
-if __name__ == "__main__":
-    import pprint
-
-    # Example: Two dense subgraphs with weak inter-links
-    G = nx.DiGraph()
-
-    # Cluster 1: A–D (strong internal edges)
-    cluster1 = ["A", "B", "C", "D"]
-    for u in cluster1:
-        for v in cluster1:
-            if u != v:
-                G.add_edge(u, v, weight=10.0)
-
-    # Cluster 2: E–H (strong internal edges)
-    cluster2 = ["E", "F", "G", "H"]
-    for u in cluster2:
-        for v in cluster2:
-            if u != v:
-                G.add_edge(u, v, weight=10.0)
-
-    # Weak bridge edges between the clusters
-    for u in cluster1:
-        for v in cluster2:
-            G.add_edge(u, v, weight=0.5)
-            G.add_edge(v, u, weight=0.5)
-
-    algo = ACLClustering(G.nodes(), threshold=0.15)
-    clusters = algo(G)
-    print(clusters)
