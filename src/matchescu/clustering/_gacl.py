@@ -4,7 +4,7 @@ from typing import Iterable, Generator
 from matchescu.clustering._base import T, ClusteringAlgorithm
 from matchescu.similarity import ReferenceGraph
 
-
+# https://arxiv.org/pdf/2412.03008
 class ACLClustering(ClusteringAlgorithm[T]):
     def __init__(
         self, all_refs: Iterable[T], threshold: float = 0.75, alpha: float = 0.15
