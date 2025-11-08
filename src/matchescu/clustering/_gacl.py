@@ -1,17 +1,21 @@
 import networkx as nx
 import numpy as np
-from typing import Iterable, Optional, Generator
+from typing import Iterable, Generator
 from matchescu.clustering._base import T, ClusteringAlgorithm
 from matchescu.similarity import ReferenceGraph
 
 
 class ACLClustering(ClusteringAlgorithm[T]):
-    def __init__(self, all_refs: Iterable[T], threshold: float = 0.75, alpha: float = 0.15):
+    def __init__(
+        self, all_refs: Iterable[T], threshold: float = 0.75, alpha: float = 0.15
+    ):
         super().__init__(all_refs, threshold)
         self._alpha = alpha
 
     @staticmethod
-    def __build_transition_matrix(digraph: nx.DiGraph, node_indexes: dict[T, int]) -> np.ndarray:
+    def __build_transition_matrix(
+        digraph: nx.DiGraph, node_indexes: dict[T, int]
+    ) -> np.ndarray:
         n = len(node_indexes)
         result = np.zeros((n, n), dtype=float)
         for node, i in node_indexes.items():
@@ -27,7 +31,9 @@ class ACLClustering(ClusteringAlgorithm[T]):
         return result
 
     @staticmethod
-    def __stationary_distribution(transition_matrix: np.ndarray, tol: float = 1e-12, max_iter: int = 20000) -> np.ndarray:
+    def __stationary_distribution(
+        transition_matrix: np.ndarray, tol: float = 1e-12, max_iter: int = 20000
+    ) -> np.ndarray:
         n = transition_matrix.shape[0]
         phi = np.ones(n) / n
         for _ in range(max_iter):
@@ -43,8 +49,13 @@ class ACLClustering(ClusteringAlgorithm[T]):
         return phi
 
     @staticmethod
-    def __lazy_ppr(transition_matrix: np.ndarray, s: np.ndarray, alpha: float = 0.15,
-                   tol: float = 1e-12, max_iter: int = 20000) -> np.ndarray:
+    def __lazy_ppr(
+        transition_matrix: np.ndarray,
+        s: np.ndarray,
+        alpha: float = 0.15,
+        tol: float = 1e-12,
+        max_iter: int = 20000,
+    ) -> np.ndarray:
         p = s.copy().astype(float)
         for _ in range(max_iter):
             # p_next = alpha*s + (1-alpha) * p * M, where M = 0.5*(I + P)
@@ -55,7 +66,9 @@ class ACLClustering(ClusteringAlgorithm[T]):
         return p
 
     @staticmethod
-    def _measure_conductance(mask: np.ndarray, transition_matrix: np.ndarray, phi: np.ndarray) -> float:
+    def _measure_conductance(
+        mask: np.ndarray, transition_matrix: np.ndarray, phi: np.ndarray
+    ) -> float:
         if mask.sum() == 0 or mask.sum() == transition_matrix.shape[0]:
             return 1.0
         P_in_S = transition_matrix[:, mask]
@@ -66,8 +79,14 @@ class ACLClustering(ClusteringAlgorithm[T]):
         return cut / denom if denom > 0 else 1.0
 
     @classmethod
-    def _general_acl(cls, digraph: nx.DiGraph, seeds: Iterable[T], alpha: float = 0.15,
-                     tol: float = 1e-12, max_iter: int = 20000) -> tuple[list[str], float]:
+    def _general_acl(
+        cls,
+        digraph: nx.DiGraph,
+        seeds: Iterable[T],
+        alpha: float = 0.15,
+        tol: float = 1e-12,
+        max_iter: int = 20000,
+    ) -> tuple[list[str], float]:
         nodes = list(digraph.nodes())
         node_index = {node_val: i for i, node_val in enumerate(nodes)}
         node_count = len(node_index)
@@ -89,14 +108,16 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
         psi = np.zeros(node_count, dtype=float)
         psi[mask] = phi[mask] / volS
-        page_ranks = cls.__lazy_ppr(transition_matrix, psi, alpha=alpha, tol=tol, max_iter=max_iter)
+        page_ranks = cls.__lazy_ppr(
+            transition_matrix, psi, alpha=alpha, tol=tol, max_iter=max_iter
+        )
 
         denom = phi.copy()
         denom[denom == 0.0] = 1e-30
         score = page_ranks / denom
         order = np.argsort(-score)
 
-        best_cond = float('inf')
+        best_cond = float("inf")
         best_set = None
         cur_mask = np.zeros(node_count, dtype=bool)
         for j in range(node_count):
@@ -117,14 +138,18 @@ class ACLClustering(ClusteringAlgorithm[T]):
         return list(set(seeds) | reachable)
 
     @classmethod
-    def _global_acl(cls, digraph: nx.DiGraph, alpha: float = 0.15) -> Generator[tuple[list[T], float], None, None]:
+    def _global_acl(
+        cls, digraph: nx.DiGraph, alpha: float = 0.15
+    ) -> Generator[tuple[list[T], float], None, None]:
         """
         Partition the graph into clusters by repeatedly running general_acl from seeds chosen by betweenness centrality.
         Each node is assigned to at most one cluster.
         Returns a list of (cluster_nodes, conductance) tuples.
         """
         # Compute betweenness centrality (on directed, weighted graph)
-        centrality = nx.betweenness_centrality(digraph, weight='weight', normalized=True)
+        centrality = nx.betweenness_centrality(
+            digraph, weight="weight", normalized=True
+        )
         # Sort nodes descending by centrality
         sorted_nodes = sorted(centrality, key=lambda x: -centrality[x])
         assigned = set()
