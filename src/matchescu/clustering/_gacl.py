@@ -169,6 +169,8 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
         for node_u, node_v in reference_graph.matches(self._threshold):
             g.add_edge(node_u, node_v, weight=reference_graph.weight(node_u, node_v))
-
-        result = frozenset(frozenset(c) for c, _ in self._global_acl(g, self._alpha))
-        return result
+        singletons = frozenset(self._items) - frozenset(g.nodes)
+        clusters = set(frozenset(c) for c, _ in self._global_acl(g, self._alpha))
+        for singleton in singletons:
+            clusters.add(frozenset([singleton]))
+        return frozenset(clusters)
