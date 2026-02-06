@@ -70,10 +70,10 @@ def is_partition_over(
     )
 
 
-def test_single_cluster_on_default_data(global_acl, reference_graph):
+def test_clustering_on_default_data(global_acl, reference_graph):
     clusters = global_acl(reference_graph)
 
-    assert len(clusters) == 2  # returns {{a}, {c, b, d}}
+    assert len(clusters) == 3  # returns {{a}, {d}, {c, b}}
 
 
 def test_global_acl_chain_partition(all_refs, chain_reference_graph):

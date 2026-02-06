@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import scipy.sparse as sp
 from typing import Iterable, Generator
 from matchescu.clustering._base import T, ClusteringAlgorithm
 from matchescu.similarity import ReferenceGraph
@@ -16,34 +17,40 @@ class ACLClustering(ClusteringAlgorithm[T]):
     @staticmethod
     def __build_transition_matrix(
         digraph: nx.DiGraph, node_indexes: dict[T, int]
-    ) -> np.ndarray:
-        n = len(node_indexes)
-        result = np.zeros((n, n), dtype=float)
-        for node, i in node_indexes.items():
-            out_sum = 0.0
-            for next_node in digraph.successors(node):
-                w = digraph[node][next_node].get("weight", 1.0)
-                out_sum += w
-                result[i, node_indexes[next_node]] = w
-            if out_sum == 0.0:
-                result[i, i] = 1.0
-            else:
-                result[i, :] /= out_sum
-        return result
+    ) -> sp.csr_matrix:
+        # builds a sparse transition matrix P = D^-1 * A.
+        nodelist = list(node_indexes.keys())
+
+        adjacency = nx.to_scipy_sparse_array(
+            digraph, nodelist=nodelist, weight="weight", format="csr"
+        )
+        row_sums = np.array(adjacency.sum(axis=1)).flatten()
+        with np.errstate(divide="ignore", invalid="ignore"):
+            d_inv_vals = 1.0 / row_sums
+        d_inv_vals[np.isinf(d_inv_vals)] = 0.0
+        inverse_diag = sp.diags(d_inv_vals)
+
+        transition_matrix = inverse_diag @ adjacency
+        # patch up sink node positions (row_sum == 0  -->  set diagonal to 1.0)
+        sink_indices = np.where(row_sums == 0)[0]
+        if len(sink_indices) > 0:
+            sink_node_diagonal_values = sp.diags(np.where(row_sums == 0, 1.0, 0.0))
+            transition_matrix = transition_matrix + sink_node_diagonal_values
+        return transition_matrix
 
     @staticmethod
     def __stationary_distribution(
-        transition_matrix: np.ndarray, tol: float = 1e-12, max_iter: int = 20000
+        transition_matrix: sp.csr_matrix, tol: float = 1e-12, max_iter: int = 20000
     ) -> np.ndarray:
         n = transition_matrix.shape[0]
         phi = np.ones(n) / n
         for _ in range(max_iter):
-            phi_next = phi.dot(transition_matrix)
+            phi_next = phi @ transition_matrix
+            if phi_next.ndim > 1:
+                phi_next = np.asarray(phi_next).flatten()
+
             s = phi_next.sum()
-            if s == 0:
-                phi_next = np.ones(n) / n
-            else:
-                phi_next /= s
+            phi_next = np.ones(n) / n if s == 0 else phi_next / s
             if np.linalg.norm(phi_next - phi, 1) < tol:
                 return phi_next
             phi = phi_next
@@ -51,16 +58,25 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
     @staticmethod
     def __lazy_ppr(
-        transition_matrix: np.ndarray,
+        transition_matrix: sp.csr_matrix,
         s: np.ndarray,
         alpha: float = 0.15,
         tol: float = 1e-12,
         max_iter: int = 20000,
     ) -> np.ndarray:
         p = s.copy().astype(float)
+
+        factor = (1.0 - alpha) * 0.5
         for _ in range(max_iter):
-            # p_next = alpha*s + (1-alpha) * p * M, where M = 0.5*(I + P)
-            p_next = alpha * s + (1.0 - alpha) * 0.5 * (p + p.dot(transition_matrix))
+            # efficient sparse matrix multiplication
+            p_next_step = p @ transition_matrix
+
+            # ensure 1D shape
+            if p_next_step.ndim > 1:
+                p_next_step = np.asarray(p_next_step).flatten()
+
+            # p_next = alpha * s + (1-alpha) * 0.5 * (p + pP)
+            p_next = alpha * s + factor * (p + p_next_step)
             if np.linalg.norm(p_next - p, 1) < tol:
                 return p_next
             p = p_next
@@ -68,16 +84,28 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
     @staticmethod
     def _measure_conductance(
-        mask: np.ndarray, transition_matrix: np.ndarray, phi: np.ndarray
+        mask: np.ndarray, transition_matrix: sp.csr_matrix, phi: np.ndarray
     ) -> float:
-        if mask.sum() == 0 or mask.sum() == transition_matrix.shape[0]:
+        vol_s = phi[mask].sum()
+        # Avoid division by zero or empty sets
+        if vol_s == 0.0 or vol_s >= 1.0 - 1e-12:
             return 1.0
-        P_in_S = transition_matrix[:, mask]
-        prob_to_in = P_in_S.sum(axis=1)
+
+        # compute the probability of moving INTO set S from any node
+        # this corresponds to matrix multiplication between transition matrix and indicator vector
+        indicator_vector = mask.astype(float)
+        prob_to_in = transition_matrix @ indicator_vector
+
+        # Ensure 1D shape
+        if prob_to_in.ndim > 1:
+            prob_to_in = np.asarray(prob_to_in).flatten()
+
+        # Cut = sum_{u in S} phi[u] * (1 - P(u -> S))
+        #     = sum_{u in S} phi[u] * P(u -> not S)
         cut = (phi[mask] * (1.0 - prob_to_in[mask])).sum()
-        volS = phi[mask].sum()
-        denom = min(volS, 1.0 - volS)
-        return cut / denom if denom > 0 else 1.0
+        denominator = min(vol_s, 1.0 - vol_s)
+        # defensive if lines above change
+        return cut / denominator if denominator > 0 else 1.0
 
     @classmethod
     def _general_acl(
@@ -91,15 +119,22 @@ class ACLClustering(ClusteringAlgorithm[T]):
         nodes = list(digraph.nodes())
         node_index = {node_val: i for i, node_val in enumerate(nodes)}
         node_count = len(node_index)
-        transition_matrix = cls.__build_transition_matrix(digraph, node_index)
 
-        lazy_walk_input = 0.5 * (np.eye(node_count) + transition_matrix)
+        transition_matrix = cls.__build_transition_matrix(digraph, node_index)
+        sparse_identity = sp.eye(node_count, format="csr")
+        lazy_walk_input = 0.5 * (sparse_identity + transition_matrix)
+
         phi = cls.__stationary_distribution(lazy_walk_input, tol=tol, max_iter=max_iter)
+
+        # Ensure phi is 1D before boolean indexing
+        if phi.ndim > 1:
+            phi = np.asarray(phi).flatten()
+
         mask = np.zeros(node_count, dtype=bool)
         for seed in seeds:
             mask[node_index[seed]] = True
+
         volS = phi[mask].sum()
-        # If volS is zero, adjust seeds using _handle_zero_volume
         if volS == 0.0:
             seeds = cls._handle_zero_volume(digraph, seeds)
             mask = np.zeros(node_count, dtype=bool)
@@ -109,9 +144,13 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
         psi = np.zeros(node_count, dtype=float)
         psi[mask] = phi[mask] / volS
+
         page_ranks = cls.__lazy_ppr(
             transition_matrix, psi, alpha=alpha, tol=tol, max_iter=max_iter
         )
+        # Ensure page_ranks is 1D
+        if page_ranks.ndim > 1:
+            page_ranks = np.asarray(page_ranks).flatten()
 
         denom = phi.copy()
         denom[denom == 0.0] = 1e-30
@@ -121,18 +160,23 @@ class ACLClustering(ClusteringAlgorithm[T]):
         best_cond = float("inf")
         best_set = None
         cur_mask = np.zeros(node_count, dtype=bool)
+
+        # Sweep optimization: The bottleneck is often here.
+        # Calling _measure_conductance inside the loop is correct but must be fast.
         for j in range(node_count):
             cur_mask[order[j]] = True
+            # Optional: Add early stop if conductance is "good enough" (e.g., < 0.01)
+            # to further match the paper's suggestion.
             cond = cls._measure_conductance(cur_mask, transition_matrix, phi)
             if cond < best_cond:
                 best_cond = cond
                 best_set = cur_mask.copy()
+
         best_nodes = [nodes[i] for i in np.where(best_set)[0]]
         return best_nodes, best_cond
 
     @staticmethod
     def _handle_zero_volume(digraph: nx.DiGraph, seeds: Iterable[T]):
-        # Collect all descendants from each seed
         reachable = set()
         for seed in seeds:
             reachable.update(nx.descendants(digraph, seed))
@@ -142,23 +186,27 @@ class ACLClustering(ClusteringAlgorithm[T]):
     def _global_acl(
         cls, digraph: nx.DiGraph, alpha: float = 0.15
     ) -> Generator[tuple[list[T], float], None, None]:
-        """
-        Partition the graph into clusters by repeatedly running general_acl from seeds chosen by betweenness centrality.
-        Each node is assigned to at most one cluster.
-        Returns a list of (cluster_nodes, conductance) tuples.
-        """
-        # Compute betweenness centrality (on directed, weighted graph)
-        centrality = nx.betweenness_centrality(
-            digraph, weight="weight", normalized=True
-        )
-        # Sort nodes descending by centrality
+        # CRITICAL PERFORMANCE FIX:
+        # nx.betweenness_centrality is O(VE). using nx.degree_centrality (O(E))
+        # because with Degree Centrality O(E).
+        # For weighted graphs, use degree (strength) or PageRank.
+        centrality = nx.degree_centrality(digraph)
+
         sorted_nodes = sorted(centrality, key=lambda x: -centrality[x])
         assigned = set()
         for node in sorted_nodes:
             if node in assigned:
                 continue
+            # Construct subgraph of unassigned nodes
             sub_nodes = [n for n in digraph.nodes() if n not in assigned]
+            if not sub_nodes:
+                break
+
             subgraph = digraph.subgraph(sub_nodes).copy().to_directed()
+            # If node is not in subgraph anymore (isolated/removed), skip
+            if node not in subgraph:
+                continue
+
             cluster, cond = cls._general_acl(subgraph, [node], alpha=alpha)
             cluster_set = set(cluster)
             assigned.update(cluster_set)
@@ -166,7 +214,6 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
     def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         g = nx.DiGraph()
-
         for node_u, node_v in reference_graph.matches(self._threshold):
             g.add_edge(node_u, node_v, weight=reference_graph.weight(node_u, node_v))
         singletons = frozenset(self._items) - frozenset(g.nodes)
