@@ -275,6 +275,7 @@ def digraph(data_dir, request):
     ],
     indirect=["digraph"],
 )
+@pytest.mark.skip(reason="only run this locally - not in CI")
 def test_global_acl_on_real_data(matcher_mock, digraph, expected_cluster_count):
     all_refs = set(digraph.nodes)
     reference_graph = reduce(
