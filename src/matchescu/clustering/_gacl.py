@@ -9,10 +9,15 @@ from matchescu.similarity import ReferenceGraph
 # https://arxiv.org/pdf/2412.03008
 class ACLClustering(ClusteringAlgorithm[T]):
     def __init__(
-        self, all_refs: Iterable[T], threshold: float = 0.75, alpha: float = 0.15
+        self,
+        all_refs: Iterable[T],
+        threshold: float = 0.75,
+        alpha: float = 0.15,
+        detect_scc: bool = True,
     ):
         super().__init__(all_refs, threshold)
         self._alpha = alpha
+        self._detect_scc = detect_scc
 
     @staticmethod
     def __build_transition_matrix(
@@ -86,13 +91,18 @@ class ACLClustering(ClusteringAlgorithm[T]):
     def _measure_conductance(
         mask: np.ndarray, transition_matrix: sp.csr_matrix, phi: np.ndarray
     ) -> float:
-        vol_s = phi[mask].sum()
-        # Avoid division by zero or empty sets
-        if vol_s == 0.0 or vol_s >= 1.0 - 1e-12:
+        n = transition_matrix.shape[0]
+        count = mask.sum()
+        if count == 0 or count == n:
             return 1.0
 
-        # compute the probability of moving INTO set S from any node
-        # this corresponds to matrix multiplication between transition matrix and indicator vector
+        vol_s = phi[mask].sum()
+        # handle degenerate volume cases
+        if vol_s == 0.0:
+            return 1.0
+
+        # vectorize: compute the probability of moving INTO set S from any node
+        # multiply transition matrix and indicator vector
         indicator_vector = mask.astype(float)
         prob_to_in = transition_matrix @ indicator_vector
 
@@ -107,24 +117,29 @@ class ACLClustering(ClusteringAlgorithm[T]):
         # defensive if lines above change
         return cut / denominator if denominator > 0 else 1.0
 
-    @classmethod
     def _general_acl(
-        cls,
+        self,
         digraph: nx.DiGraph,
         seeds: Iterable[T],
         alpha: float = 0.15,
         tol: float = 1e-12,
         max_iter: int = 20000,
     ) -> tuple[list[str], float]:
+
         nodes = list(digraph.nodes())
+        if self._detect_scc and nx.is_strongly_connected(digraph):
+            return nodes, 0.0
+
         node_index = {node_val: i for i, node_val in enumerate(nodes)}
         node_count = len(node_index)
 
-        transition_matrix = cls.__build_transition_matrix(digraph, node_index)
+        transition_matrix = self.__build_transition_matrix(digraph, node_index)
         sparse_identity = sp.eye(node_count, format="csr")
         lazy_walk_input = 0.5 * (sparse_identity + transition_matrix)
 
-        phi = cls.__stationary_distribution(lazy_walk_input, tol=tol, max_iter=max_iter)
+        phi = self.__stationary_distribution(
+            lazy_walk_input, tol=tol, max_iter=max_iter
+        )
 
         # Ensure phi is 1D before boolean indexing
         if phi.ndim > 1:
@@ -136,7 +151,7 @@ class ACLClustering(ClusteringAlgorithm[T]):
 
         volS = phi[mask].sum()
         if volS == 0.0:
-            seeds = cls._handle_zero_volume(digraph, seeds)
+            seeds = self._handle_zero_volume(digraph, seeds)
             mask = np.zeros(node_count, dtype=bool)
             for seed in seeds:
                 mask[node_index[seed]] = True
@@ -145,7 +160,7 @@ class ACLClustering(ClusteringAlgorithm[T]):
         psi = np.zeros(node_count, dtype=float)
         psi[mask] = phi[mask] / volS
 
-        page_ranks = cls.__lazy_ppr(
+        page_ranks = self.__lazy_ppr(
             transition_matrix, psi, alpha=alpha, tol=tol, max_iter=max_iter
         )
         # Ensure page_ranks is 1D
@@ -167,7 +182,7 @@ class ACLClustering(ClusteringAlgorithm[T]):
             cur_mask[order[j]] = True
             # Optional: Add early stop if conductance is "good enough" (e.g., < 0.01)
             # to further match the paper's suggestion.
-            cond = cls._measure_conductance(cur_mask, transition_matrix, phi)
+            cond = self._measure_conductance(cur_mask, transition_matrix, phi)
             if cond < best_cond:
                 best_cond = cond
                 best_set = cur_mask.copy()
@@ -182,15 +197,10 @@ class ACLClustering(ClusteringAlgorithm[T]):
             reachable.update(nx.descendants(digraph, seed))
         return list(set(seeds) | reachable)
 
-    @classmethod
     def _global_acl(
-        cls, digraph: nx.DiGraph, alpha: float = 0.15
+        self, digraph: nx.DiGraph, alpha: float = 0.15
     ) -> Generator[tuple[list[T], float], None, None]:
-        # CRITICAL PERFORMANCE FIX:
-        # nx.betweenness_centrality is O(VE). using nx.degree_centrality (O(E))
-        # because with Degree Centrality O(E).
-        # For weighted graphs, use degree (strength) or PageRank.
-        centrality = nx.degree_centrality(digraph)
+        centrality = nx.pagerank(digraph, weight="weight")
 
         sorted_nodes = sorted(centrality, key=lambda x: -centrality[x])
         assigned = set()
@@ -207,7 +217,7 @@ class ACLClustering(ClusteringAlgorithm[T]):
             if node not in subgraph:
                 continue
 
-            cluster, cond = cls._general_acl(subgraph, [node], alpha=alpha)
+            cluster, cond = self._general_acl(subgraph, [node], alpha=alpha)
             cluster_set = set(cluster)
             assigned.update(cluster_set)
             yield cluster, cond
