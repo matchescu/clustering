@@ -1,9 +1,11 @@
 import itertools
-from functools import reduce
+from functools import reduce, partial
 
 import pytest
+
 from matchescu.clustering._gacl import ACLClustering, SeedStrategy, PartitionStrategy
-from matchescu.similarity import ReferenceGraph
+from matchescu.similarity import ReferenceGraph, GmlGraphPersistence
+from matchescu.typing import EntityReference
 
 
 @pytest.fixture
@@ -256,3 +258,39 @@ def test_global_acl_ring_with_cliques(global_acl, all_refs, ring_with_cliques_di
     assert len(clusters) == 3, f"Expected 3 clusters, got {len(clusters)}: {clusters}"
     sizes = sorted(len(c) for c in clusters)
     assert sizes == [3, 3, 4], f"Expected cluster sizes [3, 3, 4], got {sizes}"
+
+
+@pytest.fixture
+def digraph(data_dir, request):
+    file_name = request.param if hasattr(request, "param") else "beer-ref-digraph.gml"
+    persistence = GmlGraphPersistence(data_dir / file_name)
+    return persistence.load()
+
+
+@pytest.mark.parametrize(
+    "digraph, expected_cluster_count",
+    [
+        ("beer-ref-digraph.gml", 274),
+        ("abt-buy-ref-digraph.gml", 1060),
+    ],
+    indirect=["digraph"],
+)
+def test_global_acl_on_real_data(matcher_mock, digraph, expected_cluster_count):
+    all_refs = set(digraph.nodes)
+    reference_graph = reduce(
+        lambda g, pair: g.add(*map(partial(EntityReference, value=[]), pair)),
+        digraph.edges(),
+        ReferenceGraph(matcher_mock, directed=True),
+    )
+    global_acl = ACLClustering(
+        all_refs,
+        threshold=0.4,
+        partition_strategy=PartitionStrategy.PAGERANK,
+        betweenness_sample_count=5,
+    )
+
+    actual = global_acl(reference_graph)
+
+    ok, msg = is_partition_over(all_refs, actual)
+    assert ok, msg
+    assert len(actual) == expected_cluster_count

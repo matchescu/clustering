@@ -121,7 +121,6 @@ class ACLClustering(ClusteringAlgorithm[T]):
             phi = phi_next
         return phi
 
-
     @staticmethod
     def __lazy_ppr1(
         transition_matrix: np.ndarray,
