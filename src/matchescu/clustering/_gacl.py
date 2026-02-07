@@ -44,6 +44,24 @@ class ACLClustering(ClusteringAlgorithm[T]):
         self._k = betweenness_sample_count
 
     @staticmethod
+    def __build_transition_matrix1(
+        digraph: nx.DiGraph, node_indexes: dict[T, int]
+    ) -> np.ndarray:
+        n = len(node_indexes)
+        result = np.zeros((n, n), dtype=float)
+        for node, i in node_indexes.items():
+            out_sum = 0.0
+            for next_node in digraph.successors(node):
+                w = digraph[node][next_node].get("weight", 1.0)
+                out_sum += w
+                result[i, node_indexes[next_node]] = w
+            if out_sum == 0.0:
+                result[i, i] = 1.0
+            else:
+                result[i, :] /= out_sum
+        return result
+
+    @staticmethod
     def __build_transition_matrix(
         digraph: nx.DiGraph, node_indexes: dict[T, int]
     ) -> sp.csr_matrix:
@@ -68,6 +86,24 @@ class ACLClustering(ClusteringAlgorithm[T]):
         return transition_matrix
 
     @staticmethod
+    def __stationary_distribution1(
+        transition_matrix: np.ndarray, tol: float = 1e-12, max_iter: int = 20000
+    ) -> np.ndarray:
+        n = transition_matrix.shape[0]
+        phi = np.ones(n) / n
+        for _ in range(max_iter):
+            phi_next = phi.dot(transition_matrix)
+            s = phi_next.sum()
+            if s == 0:
+                phi_next = np.ones(n) / n
+            else:
+                phi_next /= s
+            if np.linalg.norm(phi_next - phi, 1) < tol:
+                return phi_next
+            phi = phi_next
+        return phi
+
+    @staticmethod
     def __stationary_distribution(
         transition_matrix: sp.csr_matrix, tol: float = 1e-12, max_iter: int = 20000
     ) -> np.ndarray:
@@ -84,6 +120,24 @@ class ACLClustering(ClusteringAlgorithm[T]):
                 return phi_next
             phi = phi_next
         return phi
+
+
+    @staticmethod
+    def __lazy_ppr1(
+        transition_matrix: np.ndarray,
+        s: np.ndarray,
+        alpha: float = 0.15,
+        tol: float = 1e-12,
+        max_iter: int = 20000,
+    ) -> np.ndarray:
+        p = s.copy().astype(float)
+        for _ in range(max_iter):
+            # p_next = alpha*s + (1-alpha) * p * M, where M = 0.5*(I + P)
+            p_next = alpha * s + (1.0 - alpha) * 0.5 * (p + p.dot(transition_matrix))
+            if np.linalg.norm(p_next - p, 1) < tol:
+                return p_next
+            p = p_next
+        return p
 
     @staticmethod
     def __lazy_ppr(
