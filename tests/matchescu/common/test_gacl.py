@@ -2,7 +2,7 @@ import itertools
 from functools import reduce
 
 import pytest
-from matchescu.clustering._gacl import ACLClustering
+from matchescu.clustering._gacl import ACLClustering, SeedStrategy, PartitionStrategy
 from matchescu.similarity import ReferenceGraph
 
 
@@ -165,13 +165,16 @@ def test_global_acl_chain_partition(all_refs, chain_digraph):
     assert len(clusters) == 4, "expected chain to be broken up into singletons"
 
 
-def test_global_acl_branched_graph(all_refs, branched_digraph):
-    algo = ACLClustering(all_refs)
+@pytest.mark.parametrize("seed_strategy", [SeedStrategy.PAGERANK, SeedStrategy.DEGREE])
+def test_global_acl_identifies_multiple_branches_with_bridge_partitioning(
+    all_refs, branched_digraph, seed_strategy
+):
+    algo = ACLClustering(all_refs, seed_strategy=seed_strategy)
     clusters = algo(branched_digraph)
 
     ok, msg = is_partition_over(all_refs, clusters)
     assert ok, msg
-    assert len(clusters) == 4
+    assert len(clusters) == 1
 
 
 def test_global_acl_identifies_rings_with_scc(all_refs, ring_digraph):
@@ -183,13 +186,38 @@ def test_global_acl_identifies_rings_with_scc(all_refs, ring_digraph):
     assert len(clusters) == 1
 
 
-def test_global_acl_no_ring_identification_without_scc(all_refs, ring_digraph):
-    algo = ACLClustering(all_refs, detect_scc=False)
+@pytest.mark.parametrize("seed_strategy", [SeedStrategy.DEGREE, SeedStrategy.PAGERANK])
+def test_global_acl_no_ring_identification_without_augmentation(
+    all_refs, ring_digraph, seed_strategy
+):
+    algo = ACLClustering(
+        all_refs,
+        partition_strategy=PartitionStrategy.PAGERANK,
+        detect_scc=False,
+        seed_strategy=seed_strategy,
+    )
     clusters = algo(ring_digraph)
 
     ok, msg = is_partition_over(all_refs, clusters)
     assert ok, msg
     assert len(clusters) == 3
+
+
+@pytest.mark.parametrize("seed_strategy", [SeedStrategy.DEGREE, SeedStrategy.PAGERANK])
+def test_global_acl_ring_identification_via_bridge_partitioning(
+    all_refs, ring_digraph, seed_strategy
+):
+    algo = ACLClustering(
+        all_refs,
+        partition_strategy=PartitionStrategy.BRIDGE,
+        detect_scc=False,
+        seed_strategy=seed_strategy,
+    )
+    clusters = algo(ring_digraph)
+
+    ok, msg = is_partition_over(all_refs, clusters)
+    assert ok, msg
+    assert len(clusters) == 1
 
 
 def test_global_acl_identifies_cliques(all_refs, clique_digraph):

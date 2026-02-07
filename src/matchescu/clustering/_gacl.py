@@ -1,9 +1,23 @@
+import math
+from enum import StrEnum
+
 import networkx as nx
 import numpy as np
 import scipy.sparse as sp
 from typing import Iterable, Generator
 from matchescu.clustering._base import T, ClusteringAlgorithm
 from matchescu.similarity import ReferenceGraph
+
+
+class SeedStrategy(StrEnum):
+    DEGREE = "degree"
+    PAGERANK = "pagerank"
+    BETWEENNESS = "betweenness"
+
+
+class PartitionStrategy(StrEnum):
+    PAGERANK = "pagerank"
+    BRIDGE = "bridge"
 
 
 # https://arxiv.org/pdf/2412.03008
@@ -13,11 +27,21 @@ class ACLClustering(ClusteringAlgorithm[T]):
         all_refs: Iterable[T],
         threshold: float = 0.75,
         alpha: float = 0.15,
+        seed_strategy: SeedStrategy = SeedStrategy.BETWEENNESS,
+        partition_strategy: PartitionStrategy = PartitionStrategy.BRIDGE,
         detect_scc: bool = True,
+        betweenness_sample_count: int | None = None,  # autoselect
     ):
         super().__init__(all_refs, threshold)
         self._alpha = alpha
         self._detect_scc = detect_scc
+        self._strategy = (
+            self._global_acl_pagerank
+            if partition_strategy == PartitionStrategy.PAGERANK
+            else self._global_acl_bridge
+        )
+        self._seed_strategy = seed_strategy
+        self._k = betweenness_sample_count
 
     @staticmethod
     def __build_transition_matrix(
@@ -197,37 +221,95 @@ class ACLClustering(ClusteringAlgorithm[T]):
             reachable.update(nx.descendants(digraph, seed))
         return list(set(seeds) | reachable)
 
-    def _global_acl(
-        self, digraph: nx.DiGraph, alpha: float = 0.15
-    ) -> Generator[tuple[list[T], float], None, None]:
-        centrality = nx.pagerank(digraph, weight="weight")
+    def _compute_centrality(self, g: nx.DiGraph):
+        match self._seed_strategy:
+            case SeedStrategy.PAGERANK:
+                return nx.pagerank(g, weight="weight")
+            case SeedStrategy.DEGREE:
+                return nx.degree_centrality(g)
+            case SeedStrategy.BETWEENNESS:
+                k = int(self._k or math.sqrt(len(g.nodes)))
+                return nx.betweenness_centrality(g, k, normalized=True, weight="weight")
 
+    def _partition_component(
+        self, subgraph: nx.DiGraph, alpha: float
+    ) -> Generator[tuple[list[T], float], None, None]:
+        """Partition a single structural component using ACL with pagerank seeding."""
+        centrality = self._compute_centrality(subgraph)
         sorted_nodes = sorted(centrality, key=lambda x: -centrality[x])
+
         assigned = set()
         for node in sorted_nodes:
             if node in assigned:
                 continue
-            # Construct subgraph of unassigned nodes
-            sub_nodes = [n for n in digraph.nodes() if n not in assigned]
+            sub_nodes = [n for n in subgraph.nodes() if n not in assigned]
             if not sub_nodes:
                 break
-
-            subgraph = digraph.subgraph(sub_nodes).copy().to_directed()
-            # If node is not in subgraph anymore (isolated/removed), skip
-            if node not in subgraph:
+            inner_subgraph = subgraph.subgraph(sub_nodes).to_directed().copy()
+            if node not in inner_subgraph:
                 continue
 
-            cluster, cond = self._general_acl(subgraph, [node], alpha=alpha)
+            cluster, cond = self._general_acl(inner_subgraph, [node], alpha=alpha)
             cluster_set = set(cluster)
             assigned.update(cluster_set)
             yield cluster, cond
+
+    def _global_acl_pagerank(
+        self, digraph: nx.DiGraph, alpha: float
+    ) -> Generator[tuple[list[T], float], None, None]:
+        """Iteratively selects highest-pagerank unassigned node as seed."""
+        yield from self._partition_component(digraph, alpha)
+
+    def _global_acl_bridge(
+        self, digraph: nx.DiGraph, alpha: float
+    ) -> Generator[tuple[list[T], float], None, None]:
+        """Use the undirected skeleton to identify structurally cohesive groups.
+
+        This captures:
+        - Rings: a→b→c→d→a (strongly connected cycles)
+        - Diamonds: a→b→d, a→c→d (multi-path structures)
+        - Cliques: fully connected subgraphs
+
+        Nodes within the same bridge component have 2+ edge-disjoint paths
+        between them in the undirected view, indicating structural cohesion.
+        """
+        undirected = digraph.to_undirected()
+
+        # Find 2-edge-connected components (bridge components)
+        # These are maximal subgraphs where no single edge removal disconnects them
+        bridge_components = list(nx.connectivity.bridge_components(undirected))
+
+        for component in bridge_components:
+            if len(component) <= 1:
+                yield list(component), 0.0
+                continue
+
+            subgraph = digraph.subgraph(component).to_directed().copy()
+
+            # If SCC shortcut enabled and strongly connected, keep as one cluster
+            if self._detect_scc and nx.is_strongly_connected(subgraph):
+                yield list(component), 0.0
+                continue
+
+            # Check if component is "bridge-free" in undirected sense
+            # (i.e., every pair is connected via 2+ paths)
+            # If so, keep together as the multi-path structure is cohesive
+            component_undirected = undirected.subgraph(component)
+            if nx.is_connected(component_undirected) and not list(
+                nx.bridges(component_undirected)
+            ):
+                yield list(component), 0.0
+                continue
+
+            # Otherwise, run ACL-based partitioning within this component
+            yield from self._partition_component(subgraph, alpha)
 
     def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         g = nx.DiGraph()
         for node_u, node_v in reference_graph.matches(self._threshold):
             g.add_edge(node_u, node_v, weight=reference_graph.weight(node_u, node_v))
         singletons = frozenset(self._items) - frozenset(g.nodes)
-        clusters = set(frozenset(c) for c, _ in self._global_acl(g, self._alpha))
+        clusters = set(frozenset(c) for c, _ in self._strategy(g, self._alpha))
         for singleton in singletons:
             clusters.add(frozenset([singleton]))
         return frozenset(clusters)
