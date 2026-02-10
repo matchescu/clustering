@@ -8,6 +8,9 @@ from matchescu.clustering._ecp import (
     EquivalenceClassPartitioner,
 )
 from matchescu.clustering._mcl import MarkovClustering
+from matchescu.clustering._gacl import ACLClustering, SeedStrategy, PartitionStrategy
+from matchescu.clustering._louvain import LouvainPartitioning
+from matchescu.clustering._leiden import LeidenPartitioning
 
 
 __all__ = [
@@ -19,4 +22,9 @@ __all__ = [
     "ParentCenterClustering",
     "WeaklyConnectedComponents",
     "WeightedCorrelationClustering",
+    "ACLClustering",
+    "SeedStrategy",
+    "PartitionStrategy",
+    "LouvainPartitioning",
+    "LeidenPartitioning",
 ]
