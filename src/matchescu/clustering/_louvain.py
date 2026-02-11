@@ -37,11 +37,11 @@ class LouvainPartitioning(ClusteringAlgorithm[T]):
         ):
             best = partition
 
-        if best is None:
-            return (
-                frozenset(frozenset([node]) for node in graph.nodes)
-                if graph.number_of_nodes() > 0
-                else frozenset()
-            )
-
-        return frozenset(frozenset(node for node in cluster) for cluster in best)
+        unassigned = self._items
+        partition = []
+        if best is not None:
+            assigned = set(node for cluster in best for node in cluster)
+            unassigned = set(self._items) - assigned
+            partition = [frozenset(node for node in cluster) for cluster in best]
+        partition.extend(frozenset([ref]) for ref in unassigned)
+        return frozenset(cluster for cluster in partition)
