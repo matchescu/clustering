@@ -32,13 +32,44 @@ TEST_EDGES = {
 def test_basic_scenario(
     matcher_mock,
     reference_graph,
-    min_match_threshold,
     all_refs,
+    min_match_threshold,
 ):
-    make_clusters = ParentCenterClustering(all_refs, 0.0)
+    pc = ParentCenterClustering(all_refs, 0.0)
 
-    clusters = make_clusters(reference_graph)
+    clusters = pc(reference_graph)
 
     assert len(clusters) == 4
     n_clustered_items = len(set(elem for cluster in clusters for elem in cluster))
     assert len(all_refs) == n_clustered_items
+
+
+TEST_CYCLE_EDGES = {
+    ("u", "v"): 0.6,
+    ("v", "w"): 0.5,
+    ("w", "u"): 0.8,
+}
+
+
+@pytest.mark.parametrize(
+    "matcher_mock,reference_graph,all_refs,min_match_threshold",
+    [
+        (
+            TEST_CYCLE_EDGES,
+            list(TEST_CYCLE_EDGES.keys()),
+            {"u", "v", "w", "x"},
+            min(TEST_CYCLE_EDGES.values()),
+        )
+    ],
+    indirect=True,
+)
+def test_cycle(
+    matcher_mock,
+    reference_graph,
+    all_refs,
+    min_match_threshold,
+):
+    pc = ParentCenterClustering(all_refs, min_match_threshold)
+
+    clusters = pc(reference_graph)
+    assert len(clusters) == 2
