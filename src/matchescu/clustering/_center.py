@@ -14,8 +14,14 @@ class ParentCenterClustering(ClusteringAlgorithm[T]):
     @staticmethod
     def _find_root(parents, node):
         path = []
+        visited = set()
 
         while parents[node] != node:
+            if node in visited:
+                parents[node] = node
+                break
+
+            visited.add(node)
             path.append(node)
             node = parents[node]
 
