@@ -1,3 +1,4 @@
+import csv
 from functools import reduce, partial
 from pathlib import Path
 from typing import Hashable, Callable
@@ -5,7 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from matchescu.similarity import ReferenceGraph, Matcher
+from matchescu.clustering import EquivalenceClassPartitioner
+from matchescu.similarity import ReferenceGraph, Matcher, GmlGraphPersistence
 from matchescu.typing import EntityReferenceIdentifier, EntityReference
 
 
@@ -17,6 +19,46 @@ def test_dir():
 @pytest.fixture(scope="session")
 def data_dir(test_dir):
     return test_dir / "data"
+
+
+@pytest.fixture
+def file_digraph(data_dir, request):
+    file_name = request.param if hasattr(request, "param") else "beer-fwd-digraph.gml"
+    persistence = GmlGraphPersistence(data_dir / file_name)
+    return persistence.load()
+
+
+@pytest.fixture
+def csv_all_refs(data_dir, request):
+    file_name = request.param if hasattr(request, "param") else "beer-all-refs.csv"
+    with open(data_dir / file_name, "r") as f:
+        reader = csv.reader(f.readlines())
+        col_names = {name: idx for idx, name in enumerate(next(reader))}
+        id_col = col_names["id"]
+        source_col = col_names["source"]
+        all_refs = [
+            EntityReferenceIdentifier(int(row[id_col]), row[source_col])
+            for row in reader
+        ]
+    return all_refs
+
+
+@pytest.fixture
+def csv_ground_truth(data_dir, request, csv_all_refs, file_digraph):
+    file_name = request.param if hasattr(request, "param") else "beer-ground-truth.csv"
+    ecp = EquivalenceClassPartitioner(csv_all_refs)
+    with open(data_dir / file_name, "r") as f:
+        reader = csv.reader(f.readlines())
+        col_names = next(reader)
+        pairs = [
+            (
+                EntityReferenceIdentifier(label=int(row[0]), source=col_names[0]),
+                EntityReferenceIdentifier(label=int(row[1]), source=col_names[1]),
+            )
+            for row in reader
+        ]
+    ground_truth_clusters = ecp(pairs)
+    return ground_truth_clusters
 
 
 @pytest.fixture

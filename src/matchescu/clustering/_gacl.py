@@ -202,7 +202,6 @@ class ACLClustering(ClusteringAlgorithm[T]):
         tol: float = 1e-12,
         max_iter: int = 20000,
     ) -> tuple[list[str], float]:
-
         nodes = list(digraph.nodes())
         if self._detect_scc and nx.is_strongly_connected(digraph):
             return nodes, 0.0
