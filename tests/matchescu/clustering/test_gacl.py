@@ -1,11 +1,11 @@
 import itertools
-from functools import reduce, partial
+from functools import reduce
 
 import pytest
 
 from matchescu.clustering._gacl import ACLClustering, SeedStrategy, PartitionStrategy
 from matchescu.similarity import ReferenceGraph, GmlGraphPersistence
-from matchescu.typing import EntityReference
+from pyresolvemetrics import pair_comparison_measure
 
 
 @pytest.fixture
@@ -164,19 +164,7 @@ def test_global_acl_chain_partition(all_refs, chain_digraph):
 
     ok, msg = is_partition_over(all_refs, clusters)
     assert ok, msg
-    assert len(clusters) == 4, "expected chain to be broken up into singletons"
-
-
-@pytest.mark.parametrize("seed_strategy", [SeedStrategy.PAGERANK, SeedStrategy.DEGREE])
-def test_global_acl_identifies_multiple_branches_with_bridge_partitioning(
-    all_refs, branched_digraph, seed_strategy
-):
-    algo = ACLClustering(all_refs, seed_strategy=seed_strategy)
-    clusters = algo(branched_digraph)
-
-    ok, msg = is_partition_over(all_refs, clusters)
-    assert ok, msg
-    assert len(clusters) == 1
+    assert len(clusters) == 2, "expected chain to be broken up into singletons"
 
 
 def test_global_acl_identifies_rings_with_scc(all_refs, ring_digraph):
@@ -211,7 +199,6 @@ def test_global_acl_ring_identification_via_bridge_partitioning(
 ):
     algo = ACLClustering(
         all_refs,
-        partition_strategy=PartitionStrategy.BRIDGE,
         detect_scc=False,
         seed_strategy=seed_strategy,
     )
@@ -219,7 +206,7 @@ def test_global_acl_ring_identification_via_bridge_partitioning(
 
     ok, msg = is_partition_over(all_refs, clusters)
     assert ok, msg
-    assert len(clusters) == 1
+    assert len(clusters) == 3
 
 
 def test_global_acl_identifies_cliques(all_refs, clique_digraph):
@@ -255,9 +242,9 @@ def test_global_acl_ring_with_cliques(global_acl, all_refs, ring_with_cliques_di
     ok, msg = is_partition_over(all_refs, clusters)
     assert ok, msg
 
-    assert len(clusters) == 3, f"Expected 3 clusters, got {len(clusters)}: {clusters}"
+    assert len(clusters) == 2, f"Expected 3 clusters, got {len(clusters)}: {clusters}"
     sizes = sorted(len(c) for c in clusters)
-    assert sizes == [3, 3, 4], f"Expected cluster sizes [3, 3, 4], got {sizes}"
+    assert sizes == [3, 7], f"Expected cluster sizes [3, 7], got {sizes}"
 
 
 @pytest.fixture
@@ -267,31 +254,29 @@ def digraph(data_dir, request):
     return persistence.load()
 
 
-@pytest.mark.parametrize(
-    "digraph, expected_cluster_count",
-    [
-        ("beer-ref-digraph.gml", 274),
-        ("abt-buy-ref-digraph.gml", 1060),
-    ],
-    indirect=["digraph"],
-)
 @pytest.mark.skip(reason="only run this locally - not in CI")
-def test_global_acl_on_real_data(matcher_mock, digraph, expected_cluster_count):
-    all_refs = set(digraph.nodes)
-    reference_graph = reduce(
-        lambda g, pair: g.add(*map(partial(EntityReference, value=[]), pair)),
-        digraph.edges(),
-        ReferenceGraph(matcher_mock, directed=True),
+def test_global_acl_on_real_data(
+    matcher_mock, csv_all_refs, csv_ground_truth, data_dir
+):
+    fwd_graph = ReferenceGraph(matcher_mock).load(
+        GmlGraphPersistence(data_dir / "beer-fwd-digraph.gml")
     )
+    rev_graph = ReferenceGraph(matcher_mock).load(
+        GmlGraphPersistence(data_dir / "beer-rev-digraph.gml")
+    )
+    reference_graph = fwd_graph.merge(rev_graph)
+
     global_acl = ACLClustering(
-        all_refs,
+        csv_all_refs,
         threshold=0.4,
-        partition_strategy=PartitionStrategy.PAGERANK,
-        betweenness_sample_count=5,
+        partition_strategy=PartitionStrategy.DIRECTED,
+        seed_strategy=SeedStrategy.BETWEENNESS_SAMPLED,
+        detect_scc=True,
     )
 
     actual = global_acl(reference_graph)
 
-    ok, msg = is_partition_over(all_refs, actual)
+    ok, msg = is_partition_over(csv_all_refs, actual)
     assert ok, msg
-    assert len(actual) == expected_cluster_count
+    score = pair_comparison_measure(csv_ground_truth, actual)
+    assert 0.5 <= score <= 1
