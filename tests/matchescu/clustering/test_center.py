@@ -1,7 +1,12 @@
 import pytest
 
 from matchescu.clustering._center import ParentCenterClustering
-from pyresolvemetrics import twi
+from pyresolvemetrics import (
+    twi,
+    cluster_comparison_measure,
+    pair_comparison_measure,
+    adjusted_rand_index,
+)
 from tests.testutil import is_partition_over
 
 
@@ -65,5 +70,11 @@ def test_partitioning_on_real_data(
     actual = algorithm(dataset_fwd_graph)
 
     assert is_partition_over(dataset_refs, actual)
-    score = twi(dataset_ground_truth, actual)
-    assert 0 <= score <= 1
+    metrics = [
+        pair_comparison_measure,
+        cluster_comparison_measure,
+        adjusted_rand_index,
+        twi,
+    ]
+    scores = [metric(dataset_ground_truth, actual) for metric in metrics]
+    assert all(0.95 <= score <= 1 for score in scores)
