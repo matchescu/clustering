@@ -22,17 +22,29 @@ class SpectralClustering(
         self,
         all_refs: Iterable[T],
         threshold: float = 0.75,
-        cluster_count: int | None = None,
+        max_cluster_count: int | None = None,
         alpha: float = 0.85,
         epsilon: float = 1e-5,
+        detect_wcc: bool = False,
+        min_component_size: int = 3,
     ):
         super().__init__(all_refs, threshold)
         self._alpha = alpha
         self._epsilon = epsilon
-        self._k = cluster_count
+        self._k = max_cluster_count
+        self._detect_wcc = detect_wcc
+        self._min_component_size = min_component_size
 
     @classmethod
     def _transition_matrix(cls, adjacency_matrix: sp.csr_matrix):
+        out_degrees = np.asarray(adjacency_matrix.sum(axis=1)).ravel()
+        with np.errstate(divide="ignore"):
+            inv = np.divide(
+                1.0, out_degrees, out=np.zeros_like(out_degrees), where=out_degrees > 0
+            )
+        D_inv = sp.diags(inv)
+        return D_inv @ adjacency_matrix
+
         out_degrees = np.asarray(adjacency_matrix.sum(axis=1)).flatten()
         D_inv = sp.diags(1.0 / out_degrees)
         return D_inv @ adjacency_matrix
@@ -117,9 +129,13 @@ class SpectralClustering(
 
     def __call__(self, similarity_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         g = self._to_directed(similarity_graph, self._threshold)
-        components = list(nx.weakly_connected_components(g))
         clusters = []
-        for c in components:
-            clusters.extend(self._extract_graph_clusters(g.subgraph(c)))
-
+        if self._detect_wcc:
+            for c in nx.weakly_connected_components(g):
+                if len(c) >= self._min_component_size:
+                    clusters.extend(self._extract_graph_clusters(g.subgraph(c)))
+                else:
+                    clusters.append(c)
+        else:
+            clusters.extend(self._extract_graph_clusters(g))
         return self._add_singletons(self._items, clusters)
