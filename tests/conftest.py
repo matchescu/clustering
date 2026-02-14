@@ -1,4 +1,5 @@
 import csv
+import os
 from functools import reduce, partial
 from pathlib import Path
 from typing import Hashable, Callable
@@ -22,16 +23,34 @@ def data_dir(test_dir):
 
 
 @pytest.fixture
+def dataset(data_dir, request):
+    default = "beer"
+    if not hasattr(request, "param"):
+        return default
+    dataset_name = str(request.param)
+    if not Path(data_dir / dataset_name).is_dir():
+        raise AssertionError(f"{dataset_name} is not a dir")
+    return dataset_name
+
+
+@pytest.fixture
 def file_digraph(data_dir, request):
     file_name = request.param if hasattr(request, "param") else "beer-fwd-digraph.gml"
     persistence = GmlGraphPersistence(data_dir / file_name)
     return persistence.load()
 
 
+def _get_dataset_fpath(data_dir, dataset, file_name):
+    fpath = data_dir / dataset / file_name
+    if not os.access(fpath, os.R_OK):
+        raise AssertionError(f"can't read from {fpath}")
+    return fpath
+
+
 @pytest.fixture
-def csv_all_refs(data_dir, request):
-    file_name = request.param if hasattr(request, "param") else "beer-all-refs.csv"
-    with open(data_dir / file_name, "r") as f:
+def dataset_refs(data_dir, dataset):
+    fpath = _get_dataset_fpath(data_dir, dataset, "all-refs.csv")
+    with open(fpath, "r") as f:
         reader = csv.reader(f.readlines())
         col_names = {name: idx for idx, name in enumerate(next(reader))}
         id_col = col_names["id"]
@@ -44,10 +63,10 @@ def csv_all_refs(data_dir, request):
 
 
 @pytest.fixture
-def csv_ground_truth(data_dir, request, csv_all_refs, file_digraph):
-    file_name = request.param if hasattr(request, "param") else "beer-ground-truth.csv"
-    ecp = EquivalenceClassPartitioner(csv_all_refs)
-    with open(data_dir / file_name, "r") as f:
+def dataset_ground_truth(data_dir, dataset, dataset_refs):
+    fpath = _get_dataset_fpath(data_dir, dataset, "ground-truth.csv")
+    ecp = EquivalenceClassPartitioner(dataset_refs)
+    with open(fpath, "r") as f:
         reader = csv.reader(f.readlines())
         col_names = next(reader)
         pairs = [
@@ -59,6 +78,25 @@ def csv_ground_truth(data_dir, request, csv_all_refs, file_digraph):
         ]
     ground_truth_clusters = ecp(pairs)
     return ground_truth_clusters
+
+
+@pytest.fixture
+def dataset_fwd_graph(matcher_mock, data_dir, dataset):
+    fpath = _get_dataset_fpath(data_dir, dataset, "fwd-digraph.gml")
+    persistence = GmlGraphPersistence(fpath)
+    return ReferenceGraph(matcher_mock).load(persistence)
+
+
+@pytest.fixture
+def dataset_rev_graph(matcher_mock, data_dir, dataset):
+    fpath = _get_dataset_fpath(data_dir, dataset, "rev-digraph.gml")
+    persistence = GmlGraphPersistence(fpath)
+    return ReferenceGraph(matcher_mock).load(persistence)
+
+
+@pytest.fixture
+def dataset_bidi_graph(dataset_fwd_graph, dataset_rev_graph):
+    return dataset_fwd_graph.merge(dataset_rev_graph)
 
 
 @pytest.fixture

@@ -1,41 +1,69 @@
 import pytest
 
 from matchescu.clustering._hac import HierarchicalAgglomerativeClustering
+from pyresolvemetrics import twi
+from tests.testutil import is_partition_over
 
-TEST_EDGES = {
-    ("A", "B"): 0.8,
-    ("C", "B"): 0.9,
-    ("B", "A"): 0.7,
-    ("E", "D"): 0.6,
-    ("D", "F"): 0.8,
-    ("G", "F"): 0.9,
-    ("H", "G"): 0.7,
-    ("I", "H"): 0.6,
-    ("J", "I"): 0.8,
-    ("K", "J"): 0.9,
-    ("L", "K"): 0.7,
-    ("M", "L"): 0.6,
-    ("N", "M"): 0.8,
-    ("O", "N"): 0.9,
-    ("P", "O"): 0.7,
-    ("Q", "P"): 0.6,
-    ("R", "Q"): 0.8,
-    ("S", "R"): 0.9,
-}
+
+@pytest.fixture
+def hac(all_refs):
+    return HierarchicalAgglomerativeClustering(all_refs)
+
+
+def test_on_chain(hac, all_refs, chain_digraph):
+    clusters = hac(chain_digraph)
+
+    assert is_partition_over(all_refs, clusters)
+    assert len(clusters) == 1, "expected chain to be preserved"
+
+
+def test_on_ring(hac, all_refs, ring_digraph):
+    clusters = hac(ring_digraph)
+
+    assert is_partition_over(all_refs, clusters)
+    assert len(clusters) == 1, "expected ring to be preserved"
+
+
+def test_clique(hac, all_refs, clique_digraph):
+    clusters = hac(clique_digraph)
+
+    assert is_partition_over(all_refs, clusters)
+    assert len(clusters) == 1, f"Clique should be 1 cluster, got {len(clusters)}"
 
 
 @pytest.mark.parametrize(
-    "matcher_mock,reference_graph,all_refs,min_match_threshold",
-    [(TEST_EDGES, list(TEST_EDGES.keys()), TEST_EDGES, min(TEST_EDGES.values()))],
+    "all_refs",
+    [
+        [
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "f",
+            "g",
+            "h",
+            "i",
+            "j",
+        ]
+    ],
     indirect=True,
 )
-def test_basic_scenario(matcher_mock, reference_graph, all_refs, min_match_threshold):
-    make_clusters = HierarchicalAgglomerativeClustering(
-        all_refs, "cosine", 0.12186934  # cos(83)
-    )
+def test_ring_with_cliques(hac, all_refs, ring_with_cliques_digraph):
+    clusters = hac(ring_with_cliques_digraph)
 
-    clusters = make_clusters(reference_graph)
+    assert is_partition_over(all_refs, clusters)
+    assert len(clusters) == 1, "Expected everything to be clustered together"
 
-    assert len(clusters) == 3
-    n_clustered_items = len(set(elem for cluster in clusters for elem in cluster))
-    assert len(all_refs) == n_clustered_items
+
+@pytest.mark.skip(reason="only run this locally - not in CI")
+def test_partitioning_on_real_data(
+    matcher_mock, dataset_refs, dataset_ground_truth, dataset_fwd_graph
+):
+    algorithm = HierarchicalAgglomerativeClustering(dataset_refs)
+
+    actual = algorithm(dataset_fwd_graph)
+
+    assert is_partition_over(dataset_refs, actual)
+    score = twi(dataset_ground_truth, actual)
+    assert 0 <= score <= 1
