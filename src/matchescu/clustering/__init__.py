@@ -11,6 +11,7 @@ from matchescu.clustering._mcl import MarkovClustering
 from matchescu.clustering._gacl import ACLClustering, SeedStrategy, PartitionStrategy
 from matchescu.clustering._louvain import LouvainPartitioning
 from matchescu.clustering._leiden import LeidenPartitioning
+from matchescu.clustering._spectral import SpectralClustering
 
 
 __all__ = [
@@ -27,4 +28,5 @@ __all__ = [
     "PartitionStrategy",
     "LouvainPartitioning",
     "LeidenPartitioning",
+    "SpectralClustering",
 ]
