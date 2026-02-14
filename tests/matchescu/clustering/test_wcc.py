@@ -2,7 +2,7 @@ import pytest
 
 from matchescu.clustering._wcc import WeaklyConnectedComponents
 from pyresolvemetrics import twi
-from testutil import is_partition_over
+from tests.testutil import is_partition_over
 
 
 @pytest.fixture

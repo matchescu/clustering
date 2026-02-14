@@ -1,9 +1,8 @@
 import pytest
 
 from matchescu.clustering._gacl import ACLClustering, SeedStrategy, PartitionStrategy
-from matchescu.similarity import ReferenceGraph, GmlGraphPersistence
 from pyresolvemetrics import pair_comparison_measure
-from testutil import is_partition_over
+from tests.testutil import is_partition_over
 
 
 @pytest.fixture

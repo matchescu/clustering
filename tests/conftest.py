@@ -1,5 +1,4 @@
 import csv
-import itertools
 import os
 from functools import reduce, partial
 from pathlib import Path
@@ -46,6 +45,7 @@ def _get_dataset_fpath(data_dir, dataset, file_name):
     if not os.access(fpath, os.R_OK):
         raise AssertionError(f"can't read from {fpath}")
     return fpath
+
 
 @pytest.fixture
 def dataset_refs(data_dir, dataset):
