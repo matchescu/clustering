@@ -4,7 +4,12 @@ import numpy as np
 import scipy.sparse as sp
 from enum import StrEnum
 from typing import Iterable, Generator
-from matchescu.clustering._base import T, ClusteringAlgorithm
+from matchescu.clustering._base import (
+    T,
+    ClusteringAlgorithm,
+    SingletonHandlerMixin,
+    NxDirectedMixin,
+)
 from matchescu.similarity import ReferenceGraph
 
 
@@ -25,7 +30,7 @@ class PartitionStrategy(StrEnum):
 
 
 # https://arxiv.org/pdf/2412.03008
-class ACLClustering(ClusteringAlgorithm[T]):
+class ACLClustering(ClusteringAlgorithm[T], SingletonHandlerMixin[T], NxDirectedMixin):
     def __init__(
         self,
         all_refs: Iterable[T],
@@ -306,12 +311,6 @@ class ACLClustering(ClusteringAlgorithm[T]):
             yield expanded, cond
 
     def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
-        g = nx.DiGraph()
-        for node_u, node_v in reference_graph.matches(self._threshold):
-            w = reference_graph.weight(node_u, node_v)
-            g.add_edge(node_u, node_v, weight=w)
-        singletons = frozenset(self._items) - frozenset(g.nodes)
+        g = self._to_directed(reference_graph, self._threshold)
         clusters = set(frozenset(c) for c, _ in self._strategy(g, self._alpha))
-        for singleton in singletons:
-            clusters.add(frozenset([singleton]))
-        return frozenset(clusters)
+        return self._add_singletons(self._items, clusters)

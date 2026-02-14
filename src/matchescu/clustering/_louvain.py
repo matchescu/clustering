@@ -1,13 +1,19 @@
 from collections.abc import Iterable
 
-import networkx as nx
 import networkx.algorithms.community.louvain as nx_louvain
 from matchescu.similarity import ReferenceGraph
 
-from matchescu.clustering._base import T, ClusteringAlgorithm
+from matchescu.clustering._base import (
+    T,
+    ClusteringAlgorithm,
+    NxDirectedMixin,
+    SingletonHandlerMixin,
+)
 
 
-class LouvainPartitioning(ClusteringAlgorithm[T]):
+class LouvainPartitioning(
+    ClusteringAlgorithm[T], SingletonHandlerMixin[T], NxDirectedMixin
+):
     def __init__(
         self,
         all_refs: Iterable[T],
@@ -19,14 +25,8 @@ class LouvainPartitioning(ClusteringAlgorithm[T]):
         self._alg_resolution = louvain_resolution
         self._alg_threshold = louvain_threshold
 
-    def _to_digraph(self, reference_graph: ReferenceGraph) -> nx.DiGraph:
-        g = nx.DiGraph()
-        for u, v in reference_graph.matches(self._threshold):
-            g.add_edge(u, v, weight=reference_graph.weight(u, v))
-        return g
-
     def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
-        graph = self._to_digraph(reference_graph)
+        graph = self._to_directed(reference_graph, self._threshold)
 
         best = None
         for partition in nx_louvain.louvain_partitions(
@@ -37,11 +37,4 @@ class LouvainPartitioning(ClusteringAlgorithm[T]):
         ):
             best = partition
 
-        unassigned = self._items
-        partition = []
-        if best is not None:
-            assigned = set(node for cluster in best for node in cluster)
-            unassigned = set(self._items) - assigned
-            partition = [frozenset(node for node in cluster) for cluster in best]
-        partition.extend(frozenset([ref]) for ref in unassigned)
-        return frozenset(cluster for cluster in partition)
+        return self._add_singletons(self._items, best)
