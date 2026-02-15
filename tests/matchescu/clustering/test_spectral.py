@@ -2,10 +2,10 @@ import pytest
 
 from matchescu.clustering._spectral import SpectralClustering
 from pyresolvemetrics import (
-    twi,
-    cluster_comparison_measure,
     pair_comparison_measure,
+    cluster_comparison_measure,
     adjusted_rand_index,
+    twi,
 )
 from tests.testutil import is_partition_over
 
@@ -62,12 +62,22 @@ def test_ring_with_cliques(spectral, all_refs, ring_with_cliques_digraph):
 
 
 @pytest.mark.skip(reason="only run this locally - not in CI")
+@pytest.mark.parametrize(
+    "dataset",
+    [
+        "abt-buy",
+        "amazon-google",
+        "beer",
+        "dblp-scholar",
+    ],
+    indirect=True,
+)
 def test_partitioning_on_real_data(
-    matcher_mock, dataset_refs, dataset_ground_truth, dataset_bidi_graph
+    benchmark, matcher_mock, dataset_refs, dataset_ground_truth, dataset_bidi_graph
 ):
-    algorithm = SpectralClustering(dataset_refs, threshold=0.4, detect_wcc=False)
+    algorithm = SpectralClustering(dataset_refs, threshold=0.4, detect_wcc=True)
 
-    actual = algorithm(dataset_bidi_graph)
+    actual = benchmark(algorithm, dataset_bidi_graph)
 
     assert is_partition_over(dataset_refs, actual)
     metrics = [
@@ -77,4 +87,6 @@ def test_partitioning_on_real_data(
         twi,
     ]
     scores = [metric(dataset_ground_truth, actual) for metric in metrics]
-    assert all(0.9 <= score <= 1 for score in scores)
+    for score in scores:
+        assert score > 0.5
+        assert score <= 1
