@@ -29,6 +29,7 @@ class SpectralClustering(
         detect_wcc: bool = True,
         min_component_size: int = 3,
         k_means_random_state: int = 21359482,
+        max_power_iterations: int = 1000,
     ):
         if min_component_size < 3:
             raise ValueError("minimum detected weak component size must be at least 3")
@@ -43,6 +44,7 @@ class SpectralClustering(
         self._detect_wcc = detect_wcc
         self._min_component_size = min_component_size
         self._kmeans_random = k_means_random_state
+        self._max_iter = max_power_iterations
 
     @classmethod
     def _transition_matrix(cls, adjacency_matrix: sp.csr_matrix):
@@ -54,15 +56,14 @@ class SpectralClustering(
         D_inv = sp.diags(inv)
         return D_inv @ adjacency_matrix
 
-    @classmethod
     def _power_iter(
-        cls, transition_matrix: sp.csr_matrix, alpha=0.85, epsilon=1e-5, max_iter=200
+        self, transition_matrix: sp.csr_matrix, alpha=0.85, epsilon=1e-5
     ) -> np.ndarray:
         n = transition_matrix.shape[0]
         pi = np.ones(n) / n  # uniform initial distribution
         teleport = np.full(n, (1 - alpha) / n)
 
-        for i in range(1, max_iter + 1):
+        for i in range(1, self._max_iter + 1):
             pi_new = alpha * transition_matrix.T @ pi + teleport
             pi_new /= pi_new.sum()
             diff = np.linalg.norm(pi_new - pi)
@@ -71,7 +72,7 @@ class SpectralClustering(
             pi = pi_new
 
         raise RuntimeError(
-            f"Power iteration did not converge after {max_iter} iterations."
+            f"Power iteration did not converge after {self._max_iter} iterations."
         )
 
     @classmethod
