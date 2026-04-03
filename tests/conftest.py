@@ -8,7 +8,12 @@ from unittest.mock import MagicMock
 import pytest
 
 from matchescu.clustering import EquivalenceClassPartitioner
-from matchescu.similarity import ReferenceGraph, Matcher, GmlGraphPersistence
+from matchescu.similarity import (
+    ReferenceGraph,
+    Matcher,
+    GmlGraphPersistence,
+    MatchResult,
+)
 from matchescu.typing import EntityReferenceIdentifier, EntityReference
 
 
@@ -135,7 +140,7 @@ def directed(request):
 
 
 def default_scoring_algorithm(_, __):
-    return 1.0
+    return MatchResult(1, [0, 1])
 
 
 @pytest.fixture
@@ -146,13 +151,15 @@ def matcher_mock(request):
         if isinstance(request.param, (int, float)):
 
             def _return_param(_, __):
-                return request.param
+                score = request.param
+                return MatchResult(score, [1 - score, score])
 
             scoring_algo = _return_param
         elif isinstance(request.param, dict):
 
             def _match_score(x, y, score_dict):
-                return score_dict.get((x.id.label, y.id.label), 0.0)
+                score = score_dict.get((x.id.label, y.id.label), 0.0)
+                return MatchResult(score, [1 - score, score])
 
             scoring_algo = partial(_match_score, score_dict=request.param)
 
