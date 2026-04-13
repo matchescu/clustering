@@ -13,9 +13,9 @@ def chain_digraph(ref, matcher_mock, source):
         (ref("c", source), ref("d", source)),
     ]
     sim_graph = reduce(
-        lambda g, pair: g.add(*pair),
+        lambda g, pair: g.add(matcher_mock(*pair)),
         edge_spec,
-        ReferenceGraph(matcher_mock, directed=True),
+        ReferenceGraph(directed=True),
     )
     return sim_graph
 
@@ -29,9 +29,9 @@ def branched_digraph(ref, matcher_mock, source):
         (ref("c", source), ref("d", source)),
     ]
     sim_graph = reduce(
-        lambda g, pair: g.add(*pair),
+        lambda g, pair: g.add(matcher_mock(*pair)),
         edge_spec,
-        ReferenceGraph(matcher_mock, directed=True),
+        ReferenceGraph(directed=True),
     )
     return sim_graph
 
@@ -45,9 +45,9 @@ def ring_digraph(ref, matcher_mock, source):
         (ref("d", source), ref("a", source)),
     ]
     sim_graph = reduce(
-        lambda g, pair: g.add(*pair),
+        lambda g, pair: g.add(matcher_mock(*pair)),
         edge_spec,
-        ReferenceGraph(matcher_mock, directed=True),
+        ReferenceGraph(directed=True),
     )
     return sim_graph
 
@@ -74,9 +74,9 @@ def clique_digraph(ref, matcher_mock, source):
         (d, c),
     ]
     sim_graph = reduce(
-        lambda g, pair: g.add(*pair),
+        lambda g, pair: g.add(matcher_mock(*pair)),
         edge_spec,
-        ReferenceGraph(matcher_mock, directed=True),
+        ReferenceGraph(directed=True),
     )
     return sim_graph
 
@@ -130,8 +130,8 @@ def ring_with_cliques_digraph(ref, matcher_mock, source):
     all_edges = ring_edges + clique1_edges + clique2_edges + bridge_edges
 
     sim_graph = reduce(
-        lambda g, pair: g.add(*pair),
+        lambda g, pair: g.add(matcher_mock(*pair)),
         all_edges,
-        ReferenceGraph(matcher_mock, directed=True),
+        ReferenceGraph(directed=True),
     )
     return sim_graph

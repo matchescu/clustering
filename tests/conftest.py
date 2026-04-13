@@ -10,7 +10,6 @@ import pytest
 from matchescu.clustering import EquivalenceClassPartitioner
 from matchescu.similarity import (
     ReferenceGraph,
-    Matcher,
     GmlGraphPersistence,
     MatchResult,
 )
@@ -89,14 +88,14 @@ def dataset_ground_truth(data_dir, dataset, dataset_refs):
 def dataset_fwd_graph(matcher_mock, data_dir, dataset):
     fpath = _get_dataset_fpath(data_dir, dataset, "fwd-digraph.gml")
     persistence = GmlGraphPersistence(fpath)
-    return ReferenceGraph(matcher_mock).load(persistence)
+    return ReferenceGraph().load(persistence)
 
 
 @pytest.fixture
 def dataset_rev_graph(matcher_mock, data_dir, dataset):
     fpath = _get_dataset_fpath(data_dir, dataset, "rev-digraph.gml")
     persistence = GmlGraphPersistence(fpath)
-    return ReferenceGraph(matcher_mock).load(persistence)
+    return ReferenceGraph().load(persistence)
 
 
 @pytest.fixture
@@ -139,8 +138,8 @@ def directed(request):
     return (not hasattr(request, "param")) or bool(request.param)
 
 
-def default_scoring_algorithm(_, __):
-    return MatchResult(1, [0, 1])
+def default_scoring_algorithm(a, b):
+    return MatchResult(a.id, b.id, 1, [0, 1])
 
 
 @pytest.fixture
@@ -150,20 +149,20 @@ def matcher_mock(request):
     if hasattr(request, "param"):
         if isinstance(request.param, (int, float)):
 
-            def _return_param(_, __):
+            def _return_param(a, b):
                 score = request.param
-                return MatchResult(score, [1 - score, score])
+                return MatchResult(a.id, b.id, score, [1 - score, score])
 
             scoring_algo = _return_param
         elif isinstance(request.param, dict):
 
             def _match_score(x, y, score_dict):
                 score = score_dict.get((x.id.label, y.id.label), 0.0)
-                return MatchResult(score, [1 - score, score])
+                return MatchResult(x.id, y.id, score, [1 - score, score])
 
             scoring_algo = partial(_match_score, score_dict=request.param)
 
-    return MagicMock(name="mock matcher object", spec=Matcher, side_effect=scoring_algo)
+    return MagicMock(name="mock matcher object", side_effect=scoring_algo)
 
 
 @pytest.fixture
@@ -176,9 +175,9 @@ def reference_graph(ref, matcher_mock, directed, source, request):
     if hasattr(request, "param") and isinstance(request.param, (list, set, tuple)):
         edge_spec = list((ref(x, source), ref(y, source)) for x, y in request.param)
     sim_graph = reduce(
-        lambda g, pair: g.add(*pair),
+        lambda g, pair: g.add(matcher_mock(*pair)),
         edge_spec,
-        ReferenceGraph(matcher_mock, directed),
+        ReferenceGraph(directed),
     )
     return sim_graph
 
