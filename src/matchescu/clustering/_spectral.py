@@ -1,18 +1,18 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 import networkx as nx
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as sp_linalg
+from matchescu.similarity import ReferenceGraph
 from sklearn.cluster import KMeans
 
 from matchescu.clustering._base import (
     ClusteringAlgorithm,
-    T,
     NxDirectedMixin,
     SingletonHandlerMixin,
+    T,
 )
-from matchescu.similarity import ReferenceGraph
 
 
 class SpectralClustering(
@@ -130,14 +130,13 @@ class SpectralClustering(
         nodes = list(g.nodes)
         adj_matrix = nx.to_scipy_sparse_array(g).power(n=self._beta)
 
-        lbl, lambda_, v, emb, pi, gaps = self._spectral_clustering(
+        lbl, _, __, ___, ____, _____ = self._spectral_clustering(
             adj_matrix, max_clusters
         )
         clusters = {}
         for idx, cluster_label in enumerate(lbl):
             clusters.setdefault(cluster_label, []).append(nodes[idx])
-        for cluster_no, cluster in clusters.items():
-            yield cluster
+        yield from clusters.values()
 
     def __call__(self, similarity_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         g = self._to_directed(similarity_graph, self._threshold)

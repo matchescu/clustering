@@ -1,11 +1,10 @@
 from collections.abc import Iterable
 
 import networkx as nx
-
 from matchescu.similarity import ReferenceGraph
 from matchescu.typing import EntityReferenceIdentifier
 
-from matchescu.clustering._base import T, ClusteringAlgorithm
+from matchescu.clustering._base import ClusteringAlgorithm, T
 
 
 class ConnectedComponents(ClusteringAlgorithm[T]):

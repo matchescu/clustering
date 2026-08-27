@@ -3,7 +3,7 @@ from collections.abc import Iterable
 
 from matchescu.similarity import ReferenceGraph
 
-from matchescu.clustering._base import T, ClusteringAlgorithm
+from matchescu.clustering._base import ClusteringAlgorithm, T
 
 
 class WeightedCorrelationClustering(ClusteringAlgorithm[T]):
@@ -28,11 +28,11 @@ class WeightedCorrelationClustering(ClusteringAlgorithm[T]):
 
             pivot_cluster = frozenset(
                 {pivot}
-                | set(
+                | {
                     node
                     for node in nodes_to_check
                     if reference_graph.weight(pivot, node) >= self._threshold
-                )
+                }
             )
 
             all_clusters.append(pivot_cluster)

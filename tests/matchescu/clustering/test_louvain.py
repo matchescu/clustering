@@ -1,7 +1,7 @@
 import pytest
+from pyresolvemetrics import twi
 
 from matchescu.clustering._louvain import LouvainPartitioning
-from pyresolvemetrics import twi
 from tests.testutil import is_partition_over
 
 

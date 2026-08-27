@@ -1,7 +1,7 @@
 import pytest
-
-from matchescu.clustering._gacl import ACLClustering, SeedStrategy, PartitionStrategy
 from pyresolvemetrics import pair_comparison_measure
+
+from matchescu.clustering._gacl import ACLClustering, PartitionStrategy, SeedStrategy
 from tests.testutil import is_partition_over
 
 

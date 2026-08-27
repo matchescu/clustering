@@ -1,9 +1,8 @@
 import abc
-from collections.abc import Iterable
-from typing import TypeVar, Hashable, Generic
+from collections.abc import Hashable, Iterable
+from typing import Generic, TypeVar
 
 import networkx as nx
-
 from matchescu.similarity import ReferenceGraph
 
 T = TypeVar("T", bound=Hashable)
@@ -36,7 +35,7 @@ class SingletonHandlerMixin(Generic[T]):
         unassigned = items
         partition = []
         if clusters is not None:
-            assigned = set(node for cluster in clusters for node in cluster)
+            assigned = {node for cluster in clusters for node in cluster}
             unassigned = set(items) - assigned
             partition = [frozenset(node for node in cluster) for cluster in clusters]
         partition.extend(frozenset([ref]) for ref in unassigned)

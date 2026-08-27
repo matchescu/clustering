@@ -4,7 +4,7 @@ import igraph as ig
 import leidenalg as la
 from matchescu.similarity import ReferenceGraph
 
-from matchescu.clustering._base import T, ClusteringAlgorithm
+from matchescu.clustering._base import ClusteringAlgorithm, T
 
 
 class LeidenPartitioning(ClusteringAlgorithm[T]):

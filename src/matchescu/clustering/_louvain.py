@@ -4,10 +4,10 @@ import networkx.algorithms.community.louvain as nx_louvain
 from matchescu.similarity import ReferenceGraph
 
 from matchescu.clustering._base import (
-    T,
     ClusteringAlgorithm,
     NxDirectedMixin,
     SingletonHandlerMixin,
+    T,
 )
 
 

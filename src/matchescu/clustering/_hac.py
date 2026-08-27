@@ -1,12 +1,11 @@
 import itertools
-from typing import Iterable
+from collections.abc import Iterable
 
 import networkx as nx
 import numpy as np
-from scipy.cluster.hierarchy import linkage, fcluster
-from scipy.spatial.distance import squareform  # use condensed-form utility for HAC
-
 from matchescu.similarity import ReferenceGraph
+from scipy.cluster.hierarchy import fcluster, linkage
+from scipy.spatial.distance import squareform  # use condensed-form utility for HAC
 
 from matchescu.clustering._base import ClusteringAlgorithm, T
 

@@ -3,7 +3,7 @@ from typing import Generic
 
 from matchescu.similarity import ReferenceGraph
 
-from matchescu.clustering._base import T, ClusteringAlgorithm
+from matchescu.clustering._base import ClusteringAlgorithm, T
 
 
 class EquivalenceClassPartitioner(Generic[T]):
@@ -42,7 +42,7 @@ class EquivalenceClassPartitioner(Generic[T]):
         self._init_rank_and_path_compression()
         for x, y in pairs:
             self._union(x, y)
-        classes = {item: dict() for item in self._items}
+        classes = {item: {} for item in self._items}
         for item in self._items:
             classes[self._find(item)][item] = None
         return frozenset(

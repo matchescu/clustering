@@ -2,10 +2,9 @@ from collections.abc import Iterable
 
 import markov_clustering as mc
 import networkx as nx
-
 from matchescu.similarity import ReferenceGraph
 
-from matchescu.clustering._base import T, ClusteringAlgorithm
+from matchescu.clustering._base import ClusteringAlgorithm, T
 
 
 class MarkovClustering(ClusteringAlgorithm[T]):

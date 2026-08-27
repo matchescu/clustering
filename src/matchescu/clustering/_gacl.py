@@ -1,16 +1,18 @@
 import math
+from collections.abc import Generator, Iterable
+from enum import StrEnum
+
 import networkx as nx
 import numpy as np
 import scipy.sparse as sp
-from enum import StrEnum
-from typing import Iterable, Generator
-from matchescu.clustering._base import (
-    T,
-    ClusteringAlgorithm,
-    SingletonHandlerMixin,
-    NxDirectedMixin,
-)
 from matchescu.similarity import ReferenceGraph
+
+from matchescu.clustering._base import (
+    ClusteringAlgorithm,
+    NxDirectedMixin,
+    SingletonHandlerMixin,
+    T,
+)
 
 
 class SeedStrategy(StrEnum):
@@ -312,5 +314,5 @@ class ACLClustering(ClusteringAlgorithm[T], SingletonHandlerMixin[T], NxDirected
 
     def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         g = self._to_directed(reference_graph, self._threshold)
-        clusters = set(frozenset(c) for c, _ in self._strategy(g, self._alpha))
+        clusters = {frozenset(c) for c, _ in self._strategy(g, self._alpha)}
         return self._add_singletons(self._items, clusters)

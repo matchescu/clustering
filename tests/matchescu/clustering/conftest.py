@@ -1,7 +1,6 @@
 from functools import reduce
 
 import pytest
-
 from matchescu.similarity import ReferenceGraph
 
 

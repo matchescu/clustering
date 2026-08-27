@@ -1,12 +1,12 @@
 import pytest
-
-from matchescu.clustering._center import ParentCenterClustering
 from pyresolvemetrics import (
-    twi,
+    adjusted_rand_index,
     cluster_comparison_measure,
     pair_comparison_measure,
-    adjusted_rand_index,
+    twi,
 )
+
+from matchescu.clustering._center import ParentCenterClustering
 from tests.testutil import is_partition_over
 
 

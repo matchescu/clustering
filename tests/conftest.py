@@ -1,19 +1,19 @@
 import csv
 import os
-from functools import reduce, partial
+from collections.abc import Callable, Hashable
+from functools import partial, reduce
 from pathlib import Path
-from typing import Hashable, Callable
 from unittest.mock import MagicMock
 
 import pytest
-
-from matchescu.clustering import EquivalenceClassPartitioner
 from matchescu.similarity import (
-    ReferenceGraph,
     GmlGraphPersistence,
     MatchResult,
+    ReferenceGraph,
 )
-from matchescu.typing import EntityReferenceIdentifier, EntityReference
+from matchescu.typing import EntityReference, EntityReferenceIdentifier
+
+from matchescu.clustering import EquivalenceClassPartitioner
 
 
 @pytest.fixture(scope="session")
@@ -173,7 +173,7 @@ def reference_graph(ref, matcher_mock, directed, source, request):
         (ref("c", source), ref("d", source)),
     ]
     if hasattr(request, "param") and isinstance(request.param, (list, set, tuple)):
-        edge_spec = list((ref(x, source), ref(y, source)) for x, y in request.param)
+        edge_spec = [(ref(x, source), ref(y, source)) for x, y in request.param]
     sim_graph = reduce(
         lambda g, pair: g.add(matcher_mock(*pair)),
         edge_spec,

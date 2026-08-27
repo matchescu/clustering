@@ -1,12 +1,12 @@
 import pytest
-
-from matchescu.clustering._spectral import SpectralClustering
 from pyresolvemetrics import (
-    pair_comparison_measure,
-    cluster_comparison_measure,
     adjusted_rand_index,
+    cluster_comparison_measure,
+    pair_comparison_measure,
     twi,
 )
+
+from matchescu.clustering._spectral import SpectralClustering
 from tests.testutil import is_partition_over
 
 
