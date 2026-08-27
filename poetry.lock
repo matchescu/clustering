@@ -336,14 +336,14 @@ drawing = ["matplotlib", "networkx"]
 
 [[package]]
 name = "matchescu-base"
-version = "0.27.1"
+version = "0.27.3"
 description = "Base abstract data types for Entity Resolution"
 optional = false
-python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.10.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,!=3.8.*,!=3.9.*,>=3.11"
+python-versions = "<3.14,>=3.13"
 groups = ["main"]
 files = [
-    {file = "matchescu_base-0.27.1-py3-none-any.whl", hash = "sha256:95010d4bba513297fa90b67233ed8d229bd74c64cea03db88b6e92a344c2e2d2"},
-    {file = "matchescu_base-0.27.1.tar.gz", hash = "sha256:c5a8fbd5a1c8912bc92b1731bea9084e763ccbb89552585a2cb0f1feab890a3c"},
+    {file = "matchescu_base-0.27.3-py3-none-any.whl", hash = "sha256:ede8a11484ad3b7e62f7b814bd72587b1a750e5ab12038a53199e7338cac2c47"},
+    {file = "matchescu_base-0.27.3.tar.gz", hash = "sha256:1cd86b397643e9cde09b90e00b836b986dd9a030937ed740b74a41158f781695"},
 ]
 
 [package.dependencies]
@@ -1027,4 +1027,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "!=3.14.1,~3.13"
-content-hash = "59631ae61845dd47933a6c375c63c22d8f731185e93d65a85c151c32334d64b2"
+content-hash = "9089777a94eec5f6ac41c40d04d72d5caa7dda4efc07a1f42d6a5f21def32698"
