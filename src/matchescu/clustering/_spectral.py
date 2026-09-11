@@ -62,10 +62,15 @@ class SpectralClustering(
         n = transition_matrix.shape[0]
         pi = np.ones(n) / n  # uniform initial distribution
         teleport = np.full(n, (1 - alpha) / n)
+        # dangling nodes (zero out-degree) would leak probability mass each
+        # iteration; redistribute that mass uniformly so the operator stays
+        # stochastic and power iteration converges at rate alpha.
+        row_sums = np.asarray(transition_matrix.sum(axis=1)).ravel()
+        dangling = row_sums == 0
 
         for i in range(1, self._max_iter + 1):
-            pi_new = alpha * transition_matrix.T @ pi + teleport
-            pi_new /= pi_new.sum()
+            dangling_mass = pi[dangling].sum()
+            pi_new = alpha * (transition_matrix.T @ pi + dangling_mass / n) + teleport
             diff = np.linalg.norm(pi_new - pi)
             if diff < epsilon:
                 return pi_new
