@@ -13,9 +13,11 @@ class LeidenPartitioning(ClusteringAlgorithm[T]):
         all_refs: Iterable[T],
         threshold: float = 0.75,
         resolution: float = 1,
+        seed: int = 42,
     ) -> None:
         super().__init__(all_refs, threshold)
         self._resolution = resolution
+        self._seed = seed
 
     def _to_igraph(self, reference_graph: ReferenceGraph) -> ig.Graph:
         idx = {n: i for i, n in enumerate(self._items)}
@@ -28,9 +30,9 @@ class LeidenPartitioning(ClusteringAlgorithm[T]):
         )
         return graph
 
-    def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
-        graph = self._to_igraph(reference_graph)
-        result = la.find_partition(graph, la.ModularityVertexPartition)
+    def __call__(self, similarity_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
+        graph = self._to_igraph(similarity_graph)
+        result = la.find_partition(graph, la.ModularityVertexPartition, seed=self._seed)
         return frozenset(
             frozenset(self._items[node] for node in cluster) for cluster in result
         )

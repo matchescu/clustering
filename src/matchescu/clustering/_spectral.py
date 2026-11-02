@@ -108,7 +108,10 @@ class SpectralClustering(
             max_clusters = max(2, int(adjacency_matrix.shape[0] // 2))
 
         # smallest k eigenvectors of the random walk Laplacian
-        eigenvalues, eigenvectors = sp_linalg.eigsh(L_rw, k=max_clusters, which="SM")
+        v0 = np.random.default_rng(self._kmeans_random).random(L_rw.shape[0])
+        eigenvalues, eigenvectors = sp_linalg.eigsh(
+            L_rw, k=max_clusters, which="SM", v0=v0
+        )
         gaps = np.diff(eigenvalues)
 
         if max_clusters > 2:
