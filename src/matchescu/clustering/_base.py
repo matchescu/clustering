@@ -10,7 +10,7 @@ T = TypeVar("T", bound=Hashable)
 
 class ClusteringAlgorithm(Generic[T], metaclass=abc.ABCMeta):
     def __init__(self, all_refs: Iterable[T], threshold: float) -> None:
-        self._items = list(set(all_refs))
+        self._items = list(dict.fromkeys(all_refs))
         self._threshold = threshold
 
     @abc.abstractmethod
@@ -32,11 +32,11 @@ class SingletonHandlerMixin(Generic[T]):
     def _add_singletons(
         cls, items: Iterable[T], clusters: Iterable[Iterable[T]]
     ) -> frozenset[frozenset[T]]:
-        unassigned = items
+        unassigned = list(dict.fromkeys(items))
         partition = []
         if clusters is not None:
             assigned = {node for cluster in clusters for node in cluster}
-            unassigned = set(items) - assigned
+            unassigned = [item for item in unassigned if item not in assigned]
             partition = [frozenset(node for node in cluster) for cluster in clusters]
         partition.extend(frozenset([ref]) for ref in unassigned)
         return frozenset(cluster for cluster in partition)
