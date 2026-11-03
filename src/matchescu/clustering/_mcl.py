@@ -24,6 +24,7 @@ class MarkovClustering(ClusteringAlgorithm[T]):
 
     def __call__(self, reference_graph: ReferenceGraph) -> frozenset[frozenset[T]]:
         g = nx.DiGraph()
+        g.add_nodes_from(self._items)
 
         for u, v in reference_graph.matches(self._threshold):
             g.add_edge(u, v, weight=reference_graph.weight(u, v))
